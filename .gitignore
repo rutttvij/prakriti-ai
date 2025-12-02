@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+*.sqlite3
+
+# FastAPI uploads
+uploads/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Node modules (for frontend later)
+node_modules/
+dist/

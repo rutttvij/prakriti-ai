@@ -25,6 +25,10 @@ class WasteReport(Base):
     __tablename__ = "waste_reports"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    # Per-reporter human ID, e.g. "CIT-2-000001", "BULK-5-000003"
+    public_id = Column(String(32), unique=True, index=True, nullable=True)
+
     reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     image_path = Column(String, nullable=True)  # local file path

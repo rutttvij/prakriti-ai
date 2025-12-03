@@ -1,5 +1,5 @@
 from datetime import datetime, date, timedelta
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy.orm import Session
 
@@ -13,55 +13,25 @@ from app.services.carbon_service import add_carbon_activity
 
 
 def calculate_segregation_score(
-    wet_correct: bool,
-    dry_correct: bool,
-    reject_correct: bool,
-    hazardous_present: bool,
+    dry_kg: float,
+    wet_kg: float,
+    reject_kg: float,
 ) -> int:
     """
-    Very simple scoring for now:
-    - Each correct stream: +30
-    - All three correct: +10 bonus
-    - Hazardous present but other streams correct: small penalty
+    Very simple scoring based on contamination by weight:
+
+    total = dry + wet + reject
+    contamination = reject / total
+    score = 100 - contamination * 100 (clamped 0–100)
     """
-    score = 0
-    if wet_correct:
-        score += 30
-    if dry_correct:
-        score += 30
-    if reject_correct:
-        score += 30
+    total = dry_kg + wet_kg + reject_kg
+    if total <= 0:
+        return 0
 
-    if wet_correct and dry_correct and reject_correct:
-        score += 10  # bonus
-
-    if hazardous_present and score > 0:
-        score -= 10
-
-    # clamp between 0 and 100
-    return max(0, min(100, score))
-
-
-def _get_or_create_household(
-    db: Session,
-    name: str,
-    owner_user_id: Optional[int] = None,
-) -> Household:
-    household = (
-        db.query(Household)
-        .filter(Household.name == name, Household.owner_user_id == owner_user_id)
-        .first()
-    )
-    if household is None:
-        household = Household(
-            name=name,
-            owner_user_id=owner_user_id,
-            created_at=datetime.utcnow(),
-        )
-        db.add(household)
-        db.commit()
-        db.refresh(household)
-    return household
+    contamination = reject_kg / total
+    score = 100.0 - contamination * 100.0
+    score = max(0.0, min(100.0, score))
+    return int(round(score))
 
 
 def log_segregation(
@@ -69,28 +39,26 @@ def log_segregation(
     *,
     household_id: int,
     worker_id: Optional[int],
-    wet_correct: bool,
-    dry_correct: bool,
-    reject_correct: bool,
-    hazardous_present: bool,
+    log_date: date,
+    dry_kg: float,
+    wet_kg: float,
+    reject_kg: float,
     notes: Optional[str] = None,
 ) -> SegregationLog:
     score = calculate_segregation_score(
-        wet_correct=wet_correct,
-        dry_correct=dry_correct,
-        reject_correct=reject_correct,
-        hazardous_present=hazardous_present,
+        dry_kg=dry_kg,
+        wet_kg=wet_kg,
+        reject_kg=reject_kg,
     )
 
     log = SegregationLog(
         household_id=household_id,
         worker_id=worker_id,
-        log_date=datetime.utcnow(),
+        log_date=log_date,
+        dry_kg=dry_kg,
+        wet_kg=wet_kg,
+        reject_kg=reject_kg,
         segregation_score=score,
-        wet_correct=wet_correct,
-        dry_correct=dry_correct,
-        reject_correct=reject_correct,
-        hazardous_present=hazardous_present,
         notes=notes,
     )
     db.add(log)
@@ -121,7 +89,7 @@ def _handle_segregation_badges(db: Session, household_id: int) -> None:
     For now:
     - If household has 7 logs in last 7 days with score >= 80 => award 'Segregation Star'
     """
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    seven_days_ago = date.today() - timedelta(days=7)
 
     logs = (
         db.query(SegregationLog)
@@ -154,3 +122,15 @@ def _handle_segregation_badges(db: Session, household_id: int) -> None:
             user_id=household.owner_user_id,
             criteria_key=criteria_key,
         )
+
+
+def list_logs_for_worker(db: Session, *, worker_id: int) -> List[SegregationLog]:
+    """
+    List logs recorded by the given worker, newest first.
+    """
+    return (
+        db.query(SegregationLog)
+        .filter(SegregationLog.worker_id == worker_id)
+        .order_by(SegregationLog.log_date.desc())
+        .all()
+    )

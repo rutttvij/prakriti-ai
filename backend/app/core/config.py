@@ -26,4 +26,8 @@ class Settings(BaseModel):
         "http://127.0.0.1:5173",
     ]
 
+    # NEW → folder where all uploads (waste photos, ML inputs) are stored
+    MEDIA_ROOT: str = "uploads"
+
+
 settings = Settings()

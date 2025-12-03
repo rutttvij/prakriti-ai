@@ -12,6 +12,8 @@ class WasteReportStatus(str):
 
 class WasteReportRead(BaseModel):
     id: int
+    public_id: Optional[str] = None  # e.g. "CIT-2-000001", "BULK-5-000003"
+
     reporter_id: int
     image_path: Optional[str] = None
     description: Optional[str] = None

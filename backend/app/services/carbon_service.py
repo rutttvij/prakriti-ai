@@ -1,70 +1,78 @@
-from datetime import datetime
-from typing import Optional
+# app/services/carbon_service.py
+
+from typing import Optional, Dict, Any
 
 from sqlalchemy.orm import Session
 
-from app.models.carbon import CarbonActivity, CarbonBalance
-from app.services.token_service import add_transaction, PCC_PER_CO2E_KG
-
-
-def _get_or_create_balance(db: Session, user_id: int) -> CarbonBalance:
-    balance = db.query(CarbonBalance).filter(CarbonBalance.user_id == user_id).first()
-    if balance is None:
-        balance = CarbonBalance(
-            user_id=user_id,
-            total_co2e_kg=0.0,
-            total_pcc=0.0,
-            updated_at=datetime.utcnow(),
-        )
-        db.add(balance)
-        db.commit()
-        db.refresh(balance)
-    return balance
+from app.models.carbon import CarbonActivity, CarbonActivityType
+from app.core.carbon_engine import record_carbon_activity
 
 
 def add_carbon_activity(
     db: Session,
     user_id: int,
-    activity_type: str,
-    co2e_kg: float,
-    reference_id: Optional[int] = None,
-    description: Optional[str] = None,
-) -> CarbonActivity:
+    carbon_kg: float = 0.0,
+    pcc_tokens: float = 0.0,
+    metadata: Optional[Dict[str, Any]] = None,
+    activity_type: CarbonActivityType = CarbonActivityType.TRAINING,
+    **kwargs: Any,
+) -> Optional[CarbonActivity]:
     """
-    Core carbon engine entry point.
-    - Records carbon activity
-    - Updates carbon balance
-    - Mints PCC via token ledger (1 PCC per kg for now)
+    Backwards-compatible helper used by the training module.
+
+    Old code might have called this with slightly different param names, for example:
+      add_carbon_activity(db, user.id, carbon, tokens, meta=...)
+
+    This wrapper:
+      - Accepts positional carbon_kg, pcc_tokens
+      - Also inspects kwargs for common aliases:
+          carbon / co2 / carbon_saved
+          tokens / pcc / pcc_tokens
+          meta / metadata
+      - Defaults activity_type to TRAINING (can be overridden via kwargs)
     """
-    activity = CarbonActivity(
+
+    # Try to extract carbon_kg / pcc_tokens from kwargs if zero/not provided
+    if not carbon_kg:
+        for key in ("carbon_kg", "carbon", "co2", "carbon_saved"):
+            if key in kwargs:
+                try:
+                    carbon_kg = float(kwargs[key])
+                    break
+                except (TypeError, ValueError):
+                    pass
+
+    if not pcc_tokens:
+        for key in ("pcc_tokens", "tokens", "pcc"):
+            if key in kwargs:
+                try:
+                    pcc_tokens = float(kwargs[key])
+                    break
+                except (TypeError, ValueError):
+                    pass
+
+    # Metadata from kwargs
+    if metadata is None:
+        meta_kw = kwargs.get("meta") or kwargs.get("metadata")
+        metadata = meta_kw if isinstance(meta_kw, dict) else {}
+
+    # Allow explicit activity_type override via kwargs
+    atype_kw = kwargs.get("activity_type")
+    if isinstance(atype_kw, CarbonActivityType):
+        activity_type = atype_kw
+    elif isinstance(atype_kw, str):
+        # Try to map string to enum safely
+        try:
+            activity_type = CarbonActivityType(atype_kw.upper())
+        except ValueError:
+            pass
+
+    # Delegate to the core carbon engine
+    return record_carbon_activity(
+        db=db,
         user_id=user_id,
         activity_type=activity_type,
-        reference_id=reference_id,
-        description=description,
-        co2e_kg=co2e_kg,
-        created_at=datetime.utcnow(),
+        carbon_kg=float(carbon_kg),
+        pcc_tokens=float(pcc_tokens),
+        metadata=metadata,
     )
-    db.add(activity)
-
-    balance = _get_or_create_balance(db, user_id)
-    balance.total_co2e_kg += co2e_kg
-
-    # Mint PCC tokens for this activity
-    tokens_to_mint = co2e_kg * PCC_PER_CO2E_KG
-    if tokens_to_mint != 0:
-        add_transaction(
-            db=db,
-            user_id=user_id,
-            amount=tokens_to_mint,
-            tx_type="MINT",
-            description=f"Carbon activity: {activity_type}",
-        )
-        balance.total_pcc += tokens_to_mint
-
-    balance.updated_at = datetime.utcnow()
-
-    db.commit()
-    db.refresh(activity)
-    db.refresh(balance)
-
-    return activity

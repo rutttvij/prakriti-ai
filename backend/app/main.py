@@ -1,7 +1,10 @@
+# app/main.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.api import auth as auth_router
@@ -10,8 +13,10 @@ from app.api import segregation as segregation_router
 from app.api import waste_reporting as waste_router
 from app.api import facilities as facilities_router
 from app.api import city_ops as city_router
+from app.api import admin as admin_router  # ⬅ NEW
+from app.api import auth
 
-from app import models
+from app import models  # noqa: F401  (ensure models are imported)
 
 
 def create_app() -> FastAPI:
@@ -46,6 +51,10 @@ def create_app() -> FastAPI:
     app.include_router(waste_router.router, prefix=settings.API_V1_STR)
     app.include_router(facilities_router.router, prefix=settings.API_V1_STR)
     app.include_router(city_router.router, prefix=settings.API_V1_STR)
+    app.include_router(admin_router.router, prefix=settings.API_V1_STR)
+
+    # Legacy auth (no prefix) if you still need it:
+    app.include_router(auth.router)
 
     return app
 

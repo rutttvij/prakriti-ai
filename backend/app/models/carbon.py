@@ -1,17 +1,28 @@
+# app/models/carbon.py
+
 from datetime import datetime
+import enum
 
 from sqlalchemy import (
     Column,
     Integer,
-    String,
-    DateTime,
     Float,
+    DateTime,
     ForeignKey,
+    Enum as SAEnum,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.user import User
+
+
+class CarbonActivityType(str, enum.Enum):
+    SEGREGATION = "SEGREGATION"
+    WASTE_REPORT_RESOLUTION = "WASTE_REPORT_RESOLUTION"
+    HOUSEHOLD_CLASSIFICATION = "HOUSEHOLD_CLASSIFICATION"
+    MANUAL_AWARD = "MANUAL_AWARD"
+    TRAINING = "TRAINING"  # <--- NEW for training module
 
 
 class CarbonActivity(Base):
@@ -20,32 +31,20 @@ class CarbonActivity(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    # e.g. "SEGREGATION_LOG", "REPORT_RESOLVED", "COMPOST_LOG", "ML_CLASSIFICATION"
-    activity_type = Column(String, nullable=False)
+    activity_type = Column(
+        SAEnum(CarbonActivityType, name="carbonactivitytype"),
+        nullable=False,
+    )
 
-    # optional reference to related entity (segregation_log_id, report_id, etc.)
-    reference_id = Column(Integer, nullable=True)
+    # Positive = kg CO2e saved, negative = emitted
+    carbon_kg = Column(Float, nullable=False)
 
-    description = Column(String, nullable=True)
+    # PCC tokens awarded for this activity
+    pcc_tokens = Column(Float, nullable=False, default=0.0)
 
-    co2e_kg = Column(Float, nullable=False, default=0.0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # Renamed from "metadata" (reserved) → "details"
+    details = Column(JSONB, nullable=False, server_default="{}")
 
-    user = relationship(User, backref="carbon_activities")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-
-class CarbonBalance(Base):
-    __tablename__ = "carbon_balances"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-
-    # net cumulative CO2e credits in kg
-    total_co2e_kg = Column(Float, nullable=False, default=0.0)
-
-    # total PCC tokens (mirrors token_accounts but denormalized)
-    total_pcc = Column(Float, nullable=False, default=0.0)
-
-    updated_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship(User, backref="carbon_balance")
+    user = relationship("User", backref="carbon_activities")

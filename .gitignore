@@ -25,3 +25,7 @@ dist/
 backend/app/ml_models/
 # or, if you want the folder tracked but not the weights:
 # backend/app/ml_models/*.pth
+
+# Local ML models – do not push to GitHub
+backend/app/ml/best_effnet_b4.pth
+backend/app/ml_models/best_effnet_b4.pth

@@ -29,7 +29,7 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      // 1) Perform login (this should store access_token via AuthContext / api)
+      // 1) Perform login (store access_token via AuthContext / api)
       await login(email, password);
 
       // 2) Fetch /auth/me to get role and active status
@@ -46,11 +46,15 @@ export default function LoginPage() {
       }
 
       // 3) Role-based redirect
+      let target = "/dashboard";
+
       if (me.role === "SUPER_ADMIN") {
-        navigate("/admin", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
+        target = "/admin";
+      } else if (me.role === "WASTE_WORKER") {
+        target = "/worker/dashboard";
       }
+
+      navigate(target, { replace: true });
     } catch (err: any) {
       console.error(err);
 

@@ -1,6 +1,6 @@
 // src/components/Navbar.tsx
 import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
@@ -16,6 +16,10 @@ export const Navbar: React.FC = () => {
   };
 
   const isAuthenticated = !!user;
+  const role = user?.role || "";
+  const isWorker = role === "WASTE_WORKER";
+
+  const dashboardPath = isWorker ? "/worker/dashboard" : "/dashboard";
 
   const initials =
     user?.full_name
@@ -45,8 +49,17 @@ export const Navbar: React.FC = () => {
     "text-sm font-medium text-slate-600 hover:text-emerald-600 transition";
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-emerald-100">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    // Floating shell: fixed, centered, pointer-events wrapper
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center">
+      <nav
+        className="
+          pointer-events-auto
+          mx-4 mt-3
+          flex w-full max-w-6xl items-center justify-between
+          rounded-full border border-emerald-100 bg-white/90
+          px-4 py-2 shadow-md backdrop-blur
+        "
+      >
         {/* Left: Brand */}
         <div className="flex items-center gap-2">
           <button
@@ -56,7 +69,7 @@ export const Navbar: React.FC = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
               ♻️
             </div>
-            <div className="flex flex-col leading-tight">
+            <div className="hidden flex-col leading-tight sm:flex">
               <span className="text-sm font-semibold text-slate-900">
                 Prakriti.AI
               </span>
@@ -88,14 +101,14 @@ export const Navbar: React.FC = () => {
           {isAuthenticated && (
             <>
               <NavLink
-                to="/dashboard"
+                to={dashboardPath}
                 className={({ isActive }) =>
                   classNames(linkBase, isActive && "text-emerald-600")
                 }
               >
                 Dashboard
               </NavLink>
-              {user?.role === "SUPER_ADMIN" && (
+              {role === "SUPER_ADMIN" && (
                 <NavLink
                   to="/admin"
                   className={({ isActive }) =>
@@ -132,12 +145,12 @@ export const Navbar: React.FC = () => {
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-[0.75rem] font-semibold text-white">
                   {initials}
                 </div>
-                <div className="flex flex-col">
+                <div className="hidden flex-col sm:flex">
                   <span className="text-[0.7rem] font-medium text-slate-800">
                     {user?.full_name || "Logged in"}
                   </span>
                   <span className="text-[0.6rem] uppercase text-emerald-600">
-                    {user?.role || ""}
+                    {role || ""}
                   </span>
                 </div>
               </div>
@@ -151,12 +164,17 @@ export const Navbar: React.FC = () => {
           )}
         </div>
 
-        {/* Mobile: hamburger */}
+        {/* Mobile: right-side controls (avatar optional) */}
         <div className="flex items-center gap-2 md:hidden">
+          {isAuthenticated && (
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-[0.75rem] font-semibold text-white">
+              {initials}
+            </div>
+          )}
           {isAuthenticated && (
             <button
               onClick={handleLogout}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50"
+              className="hidden rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 sm:inline-block"
             >
               Logout
             </button>
@@ -193,58 +211,69 @@ export const Navbar: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile menu */}
+      {/* Mobile menu – anchored under the pill */}
       {open && (
-        <div className="md:hidden border-t border-emerald-50 bg-white">
-          <div className="space-y-1 px-4 py-3">
-            <button
-              onClick={() => closeMenuAndNavigate("/about")}
-              className="block w-full text-left text-sm text-slate-700 py-1.5"
-            >
-              About
-            </button>
-            <button
-              onClick={() => closeMenuAndNavigate("/contact")}
-              className="block w-full text-left text-sm text-slate-700 py-1.5"
-            >
-              Contact
-            </button>
+        <div className="pointer-events-auto absolute left-0 right-0 top-[3.25rem] md:hidden">
+          <div className="mx-4 rounded-2xl border border-emerald-50 bg-white shadow-md">
+            <div className="space-y-1 px-4 py-3">
+              <button
+                onClick={() => closeMenuAndNavigate("/about")}
+                className="block w-full py-1.5 text-left text-sm text-slate-700"
+              >
+                About
+              </button>
+              <button
+                onClick={() => closeMenuAndNavigate("/contact")}
+                className="block w-full py-1.5 text-left text-sm text-slate-700"
+              >
+                Contact
+              </button>
 
-            {isAuthenticated && (
-              <>
-                <button
-                  onClick={() => closeMenuAndNavigate("/dashboard")}
-                  className="block w-full text-left text-sm text-slate-700 py-1.5"
-                >
-                  Dashboard
-                </button>
-                {user?.role === "SUPER_ADMIN" && (
+              {isAuthenticated && (
+                <>
                   <button
-                    onClick={() => closeMenuAndNavigate("/admin")}
-                    className="block w-full text-left text-sm text-slate-700 py-1.5"
+                    onClick={() => closeMenuAndNavigate(dashboardPath)}
+                    className="block w-full py-1.5 text-left text-sm text-slate-700"
                   >
-                    Admin Panel
+                    Dashboard
                   </button>
-                )}
-              </>
-            )}
+                  {role === "SUPER_ADMIN" && (
+                    <button
+                      onClick={() => closeMenuAndNavigate("/admin")}
+                      className="block w-full py-1.5 text-left text-sm text-slate-700"
+                    >
+                      Admin Panel
+                    </button>
+                  )}
+                </>
+              )}
 
-            {!isAuthenticated && (
-              <>
+              {!isAuthenticated && (
+                <>
+                  <button
+                    onClick={() => closeMenuAndNavigate("/register")}
+                    className="block w-full py-1.5 text-left text-sm text-emerald-600"
+                  >
+                    Register
+                  </button>
+                  <button
+                    onClick={() => closeMenuAndNavigate("/login")}
+                    className="mt-1 block w-full rounded-lg bg-emerald-500 py-1.5 text-left text-sm text-white"
+                  >
+                    Login
+                  </button>
+                </>
+              )}
+
+              {isAuthenticated && (
                 <button
-                  onClick={() => closeMenuAndNavigate("/register")}
-                  className="block w-full text-left text-sm text-emerald-600 py-1.5"
+                  onClick={handleLogout}
+                  className="mt-1 block w-full rounded-lg border border-slate-200 bg-white py-1.5 text-left text-sm text-slate-700"
                 >
-                  Register
+                  Logout
                 </button>
-                <button
-                  onClick={() => closeMenuAndNavigate("/login")}
-                  className="block w-full text-left text-sm text-white bg-emerald-500 rounded-lg mt-1 py-1.5"
-                >
-                  Login
-                </button>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

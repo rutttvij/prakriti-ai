@@ -1,4 +1,3 @@
-// src/layouts/MainLayout.tsx
 import { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -31,36 +30,37 @@ export default function MainLayout({ children }: Props) {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl gap-8 px-4 py-4 sm:px-6 sm:py-6">
+    <div className="mx-auto flex max-w-6xl gap-6 px-4 pb-10 pt-4 sm:pb-12 sm:pt-6">
       {/* ----------------------------- */}
       {/* Desktop Sidebar */}
       {/* ----------------------------- */}
       <aside
         className="
-          hidden 
-          w-64                     /* Larger sidebar */
-          shrink-0 
-          rounded-2xl 
-          border 
-          border-emerald-50 
-          bg-white/80 
-          p-4                      /* More balanced padding */
-          text-sm 
-          text-slate-700 
-          sm:block 
-          ml-0
+          hidden
+          w-64
+          shrink-0
+          rounded-3xl
+          border
+          border-emerald-50
+          bg-white/90
+          p-5
+          text-sm
+          text-slate-700
+          shadow-sm
+          backdrop-blur
+          sm:block
         "
       >
-        <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
+        <div className="mb-5">
+          <p className="text-[0.75rem] font-semibold uppercase tracking-wide text-emerald-600">
             {role === "WASTE_WORKER"
               ? "Waste Worker"
               : role === "BULK_GENERATOR"
               ? "Bulk Generator"
               : "Citizen"}
           </p>
-          <p className="mt-1 text-[0.75rem] text-slate-500">
-            Navigate your daily actions.
+          <p className="mt-1 text-xs text-slate-500">
+            Navigate your daily actions and climate impact.
           </p>
         </div>
 
@@ -71,10 +71,10 @@ export default function MainLayout({ children }: Props) {
               to={item.to}
               className={({ isActive }) =>
                 classNames(
-                  "flex items-center rounded-lg px-4 py-2 text-[0.85rem] transition",
+                  "flex items-center rounded-xl px-4 py-2.5 text-sm transition-colors",
                   isActive
-                    ? "bg-emerald-50 text-emerald-700 font-medium"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-emerald-50 text-emerald-800 font-semibold shadow-[0_0_0_1px_rgba(16,185,129,0.08)]"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 )
               }
             >
@@ -87,17 +87,17 @@ export default function MainLayout({ children }: Props) {
       {/* ----------------------------- */}
       {/* Mobile top tabs (for small screens) */}
       {/* ----------------------------- */}
-      <div className="fixed inset-x-0 top-[56px] z-30 border-b border-emerald-50 bg-white/95 px-4 py-2 sm:hidden">
-        <div className="flex items-center gap-2 overflow-x-auto text-xs">
+      <div className="fixed inset-x-0 top-16 z-30 border-b border-emerald-50 bg-white/95 px-4 py-2 sm:hidden">
+        <div className="flex items-center gap-2 overflow-x-auto text-sm">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
                 classNames(
-                  "whitespace-nowrap rounded-full px-3 py-1 transition",
+                  "whitespace-nowrap rounded-full px-3.5 py-1.5 transition-colors",
                   isActive
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-emerald-500 text-white shadow-sm"
                     : "bg-slate-100 text-slate-700"
                 )
               }
@@ -113,7 +113,9 @@ export default function MainLayout({ children }: Props) {
       {/* ----------------------------- */}
       <main className="flex-1">
         {/* Adds spacing so content doesn't hide behind mobile nav */}
-        <div className="pt-10 sm:pt-0">{children}</div>
+        <div className="pt-14 sm:pt-2">
+          {children}
+        </div>
       </main>
     </div>
   );

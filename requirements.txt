@@ -9,6 +9,12 @@ python-dotenv pillow alembic
 
 pip install email-validator
 
+pip install timm
+
+pip install numpy
+
+pip install torch torchvision pillow
+
 uvicorn app.main:app --reload
 
 frontend:

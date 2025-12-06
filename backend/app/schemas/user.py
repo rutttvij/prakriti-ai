@@ -26,14 +26,14 @@ class UserCreate(BaseModel):
         min_length=12,
         max_length=12,
         pattern=r"^\d{12}$",
-    ) # type: ignore
+    )  # type: ignore
 
     # Pincode → exactly 6 digits
     pincode: constr(
         min_length=6,
         max_length=6,
         pattern=r"^\d{6}$",
-    ) # type: ignore
+    )  # type: ignore
 
     # Role-specific data
     meta: Dict[str, str] = Field(default_factory=dict)
@@ -59,3 +59,26 @@ class UserRead(BaseModel):
 
     class Config:
         from_attributes = True  # SQLAlchemy ORM → Pydantic
+
+
+# -----------------------------
+# UPDATE MODEL → For profile edit
+# -----------------------------
+class UserProfileUpdate(BaseModel):
+    """
+    Fields the user is allowed to edit from the profile modal.
+
+    - full_name / pincode are real columns on User
+    - phone / city / address / ward are stored inside User.meta
+    """
+
+    full_name: Optional[str] = None
+    pincode: Optional[str] = None
+
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    ward: Optional[str] = None  # or ward_area etc.
+
+    class Config:
+        from_attributes = True

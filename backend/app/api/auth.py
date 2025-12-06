@@ -11,7 +11,7 @@ from app.core.security import (
     create_access_token,
 )
 from app.models.user import User, UserRole
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserRead, UserProfileUpdate
 from app.schemas.auth import Token
 from app.api import deps
 
@@ -32,21 +32,21 @@ def register_user(
     Super Admin cannot self-register.
     """
 
-    # 1) Block creation of SUPER_ADMIN through public API
+    # Block super-admin self-registration
     if user_in.role == UserRole.SUPER_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Super admin accounts cannot be created via public registration.",
         )
 
-    # 2) Email must be unique
+    # Email unique
     if db.query(User).filter(User.email == user_in.email).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered.",
         )
 
-    # 3) Government ID must be unique
+    # Govt ID unique
     if user_in.government_id:
         if (
             db.query(User)
@@ -58,10 +58,8 @@ def register_user(
                 detail="This government ID is already registered.",
             )
 
-    # 4) Hash password
     hashed_pw = get_password_hash(user_in.password)
 
-    # 5) Create DB user object
     db_user = User(
         email=user_in.email,
         full_name=user_in.full_name,
@@ -88,11 +86,8 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    """
-    Standard email/password login that returns a JWT token.
-    """
+    """Standard email/password login."""
 
-    # Username field holds email in OAuth2PasswordRequestForm
     user = db.query(User).filter(User.email == form_data.username).first()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -100,15 +95,6 @@ def login(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect email or password.",
         )
-
-    # OPTIONAL: Block login for inactive accounts
-    # Uncomment whenever you want:
-    #
-    # if not user.is_active:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Account is pending approval by admin.",
-    #     )
 
     token = create_access_token(subject=user.id)
 
@@ -122,5 +108,70 @@ def login(
 def read_me(
     current_user: User = Depends(deps.get_current_user),
 ):
-    """Return currently authenticated user."""
+    return current_user
+
+
+# ---------------------------------------------------------
+# UPDATE CURRENT USER PROFILE
+# ---------------------------------------------------------
+@router.put("/me", response_model=UserRead)
+def update_me(
+    payload: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """
+    Updates:
+      - full_name
+      - pincode (only if valid 6-digit; ignore empty)
+      - meta fields: phone, city, address, ward (stored in JSONB `meta`)
+    """
+
+    data = payload.dict(exclude_unset=True)
+
+    # 1) Direct columns --------------------------
+
+    # full_name – update only if provided and non-empty
+    full_name = data.get("full_name", None)
+    if full_name is not None:
+        cleaned_name = full_name.strip()
+        if cleaned_name:
+          current_user.full_name = cleaned_name
+
+    # pincode – must be exactly 6 digits; ignore empty string
+    pincode = data.get("pincode", None)
+    if pincode is not None:
+        cleaned_pin = pincode.strip()
+        if cleaned_pin == "":
+            # User sent empty string; do not touch existing pincode
+            pass
+        else:
+            if len(cleaned_pin) == 6 and cleaned_pin.isdigit():
+                current_user.pincode = cleaned_pin
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Pincode must be exactly 6 digits.",
+                )
+
+    # 2) Meta JSON -------------------------------
+
+    meta = dict(current_user.meta or {})
+
+    # These can be empty strings; no DB constraint on meta
+    if "phone" in data:
+        meta["phone"] = (data["phone"] or "").strip()
+    if "city" in data:
+        meta["city"] = (data["city"] or "").strip()
+    if "address" in data:
+        meta["address"] = (data["address"] or "").strip()
+    if "ward" in data:
+        meta["ward"] = (data["ward"] or "").strip()
+
+    current_user.meta = meta
+
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
     return current_user

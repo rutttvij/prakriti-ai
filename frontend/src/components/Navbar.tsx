@@ -17,9 +17,6 @@ export const Navbar: React.FC = () => {
 
   const isAuthenticated = !!user;
   const role = user?.role || "";
-  const isWorker = role === "WASTE_WORKER";
-
-  const dashboardPath = isWorker ? "/worker/dashboard" : "/dashboard";
 
   const initials =
     user?.full_name
@@ -32,12 +29,9 @@ export const Navbar: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      localStorage.removeItem("access_token");
-      navigate("/", { replace: true });
-    }
+    } catch {}
+    localStorage.removeItem("access_token");
+    navigate("/", { replace: true });
   };
 
   const closeMenuAndNavigate = (path: string) => {
@@ -46,163 +40,175 @@ export const Navbar: React.FC = () => {
   };
 
   const linkBase =
-    "text-sm font-medium text-slate-600 hover:text-emerald-600 transition";
+    "text-sm font-medium text-slate-600 hover:text-emerald-700 transition";
+
+  // Role label for the little pill near avatar
+  const roleLabel =
+    role === "SUPER_ADMIN"
+      ? "Admin"
+      : role === "WASTE_WORKER"
+      ? "Waste Worker"
+      : role === "BULK_GENERATOR"
+      ? "Bulk Generator"
+      : role
+      ? "Citizen"
+      : "";
+
+  // ---------- BUILD NAV LINKS BASED ON ROLE ----------
+  type NavLinkItem = { to: string; label: string };
+
+  const buildNavLinks = (): NavLinkItem[] => {
+    const links: NavLinkItem[] = [
+      { to: "/about", label: "About" },
+      { to: "/contact", label: "Contact" },
+    ];
+
+    if (!isAuthenticated) {
+      return links;
+    }
+
+    // Primary app link depending on role
+    if (role === "SUPER_ADMIN") {
+      links.push({ to: "/admin", label: "Admin Console" });
+    } else if (role === "WASTE_WORKER") {
+      links.push({ to: "/worker/dashboard", label: "Worker Console" });
+    } else if (role === "BULK_GENERATOR") {
+      links.push({ to: "/dashboard", label: "Building Dashboard" });
+    } else {
+      // CITIZEN or unknown
+      links.push({ to: "/dashboard", label: "Dashboard" });
+    }
+
+    return links;
+  };
+
+  const navLinks = buildNavLinks();
 
   return (
-    // Floating shell: fixed, centered, pointer-events wrapper
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center">
+    <header
+      className="
+        relative z-40 flex justify-center
+        bg-gradient-to-b from-emerald-200 via-emerald-100 to-emerald-50
+      "
+    >
       <nav
         className="
-          pointer-events-auto
-          mx-4 mt-3
+          mt-4
           flex w-full max-w-6xl items-center justify-between
-          rounded-full border border-emerald-100 bg-white/90
-          px-4 py-2 shadow-md backdrop-blur
+          rounded-full border border-white/60
+          bg-gradient-to-r from-white/75 via-white/40 to-white/75
+          px-6 py-3.5
+          shadow-lg shadow-emerald-100/40
+          backdrop-blur-xl
         "
       >
-        {/* Left: Brand */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 focus:outline-none"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-sm">
-              ♻️
-            </div>
-            <div className="hidden flex-col leading-tight sm:flex">
-              <span className="text-sm font-semibold text-slate-900">
-                Prakriti.AI
-              </span>
-              <span className="text-[0.65rem] text-emerald-600">
-                Clean City • Smart Waste
+        {/* Brand */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 focus:outline-none"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col leading-tight">
+              <span className="text-lg font-semibold tracking-[0.18em] text-slate-900 uppercase">
+                Prakriti
+                <span className="ml-1 bg-gradient-to-r from-emerald-500 to-emerald-700 bg-clip-text text-transparent tracking-[0.35em]">
+                  .AI
+                </span>
               </span>
             </div>
-          </button>
-        </div>
+          </div>
+        </button>
 
-        {/* Desktop: center links */}
-        <div className="hidden items-center gap-6 md:flex">
-          <NavLink
-            to="/about"
-            className={({ isActive }) =>
-              classNames(linkBase, isActive && "text-emerald-600")
-            }
-          >
-            About
-          </NavLink>
-          <NavLink
-            to="/contact"
-            className={({ isActive }) =>
-              classNames(linkBase, isActive && "text-emerald-600")
-            }
-          >
-            Contact
-          </NavLink>
-          {isAuthenticated && (
-            <>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-6">
+          <div className="flex items-center gap-6">
+            {navLinks.map((item) => (
               <NavLink
-                to={dashboardPath}
+                key={item.to}
+                to={item.to}
                 className={({ isActive }) =>
-                  classNames(linkBase, isActive && "text-emerald-600")
+                  classNames(linkBase, isActive && "text-emerald-700")
                 }
               >
-                Dashboard
+                {item.label}
               </NavLink>
-              {role === "SUPER_ADMIN" && (
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    classNames(linkBase, isActive && "text-emerald-600")
-                  }
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div className="h-6 w-px bg-slate-200/60" />
+
+          {/* Auth Controls */}
+          <div className="flex items-center gap-3">
+            {!isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => navigate("/register")}
+                  className="rounded-full border border-emerald-600 px-4 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50/70"
                 >
-                  Admin
-                </NavLink>
-              )}
-            </>
-          )}
+                  Register
+                </button>
+                <button
+                  onClick={() => navigate("/login")}
+                  className="rounded-full bg-emerald-600 px-5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+                >
+                  Login
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 rounded-full border border-emerald-100/70 bg-emerald-50/70 px-2.5 py-1.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-[0.8rem] font-semibold text-white">
+                    {initials}
+                  </div>
+                  {roleLabel && (
+                    <span className="hidden text-[0.65rem] font-medium text-emerald-900 sm:inline-flex px-2 py-0.5 rounded-full bg-white/80 border border-emerald-100">
+                      {roleLabel}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50/80"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Desktop: right-side auth / user controls */}
-        <div className="hidden items-center gap-3 md:flex">
-          {!isAuthenticated ? (
-            <>
-              <button
-                onClick={() => navigate("/register")}
-                className="rounded-full border border-emerald-500 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
-              >
-                Register
-              </button>
-              <button
-                onClick={() => navigate("/login")}
-                className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-600"
-              >
-                Login
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/60 px-2 py-1">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-[0.75rem] font-semibold text-white">
-                  {initials}
-                </div>
-                <div className="hidden flex-col sm:flex">
-                  <span className="text-[0.7rem] font-medium text-slate-800">
-                    {user?.full_name || "Logged in"}
-                  </span>
-                  <span className="text-[0.6rem] uppercase text-emerald-600">
-                    {role || ""}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-              >
-                Logout
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Mobile: right-side controls (avatar optional) */}
-        <div className="flex items-center gap-2 md:hidden">
+        {/* Mobile menu trigger */}
+        <div className="md:hidden flex items-center gap-4">
           {isAuthenticated && (
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-[0.75rem] font-semibold text-white">
-              {initials}
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-[0.8rem] font-semibold text-white">
+                {initials}
+              </div>
+              {roleLabel && (
+                <span className="text-[0.65rem] font-medium text-emerald-900 px-2 py-0.5 rounded-full bg-white/80 border border-emerald-100">
+                  {roleLabel}
+                </span>
+              )}
             </div>
           )}
-          {isAuthenticated && (
-            <button
-              onClick={handleLogout}
-              className="hidden rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 sm:inline-block"
-            >
-              Logout
-            </button>
-          )}
           <button
-            onClick={() => setOpen((prev) => !prev)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-slate-700 hover:bg-slate-100 focus:outline-none"
-            aria-label="Toggle navigation"
+            onClick={() => setOpen(!open)}
+            className="rounded-md p-2.5 text-slate-700 hover:bg-white/50"
           >
-            <span className="sr-only">Open main menu</span>
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-            >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor">
               {open ? (
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={1.8}
+                  strokeWidth={2}
                   d="M6 6l8 8M6 14L14 6"
                 />
               ) : (
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={1.8}
+                  strokeWidth={2}
                   d="M3 5h14M3 10h14M3 15h14"
                 />
               )}
@@ -211,64 +217,40 @@ export const Navbar: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile menu – anchored under the pill */}
+      {/* Mobile dropdown */}
       {open && (
-        <div className="pointer-events-auto absolute left-0 right-0 top-[3.25rem] md:hidden">
-          <div className="mx-4 rounded-2xl border border-emerald-50 bg-white shadow-md">
-            <div className="space-y-1 px-4 py-3">
-              <button
-                onClick={() => closeMenuAndNavigate("/about")}
-                className="block w-full py-1.5 text-left text-sm text-slate-700"
-              >
-                About
-              </button>
-              <button
-                onClick={() => closeMenuAndNavigate("/contact")}
-                className="block w-full py-1.5 text-left text-sm text-slate-700"
-              >
-                Contact
-              </button>
+        <div className="absolute left-0 right-0 top-[4.6rem] md:hidden">
+          <div className="mx-4 rounded-3xl border border-white/70 bg-white/90 shadow-xl backdrop-blur-lg">
+            <div className="px-4 py-3 space-y-2">
+              {navLinks.map((item) => (
+                <button
+                  key={item.to}
+                  onClick={() => closeMenuAndNavigate(item.to)}
+                  className="block w-full text-left py-1.5 text-sm text-slate-800"
+                >
+                  {item.label}
+                </button>
+              ))}
 
-              {isAuthenticated && (
-                <>
-                  <button
-                    onClick={() => closeMenuAndNavigate(dashboardPath)}
-                    className="block w-full py-1.5 text-left text-sm text-slate-700"
-                  >
-                    Dashboard
-                  </button>
-                  {role === "SUPER_ADMIN" && (
-                    <button
-                      onClick={() => closeMenuAndNavigate("/admin")}
-                      className="block w-full py-1.5 text-left text-sm text-slate-700"
-                    >
-                      Admin Panel
-                    </button>
-                  )}
-                </>
-              )}
-
-              {!isAuthenticated && (
+              {!isAuthenticated ? (
                 <>
                   <button
                     onClick={() => closeMenuAndNavigate("/register")}
-                    className="block w-full py-1.5 text-left text-sm text-emerald-600"
+                    className="block w-full py-1.5 text-left text-sm text-emerald-700"
                   >
                     Register
                   </button>
                   <button
                     onClick={() => closeMenuAndNavigate("/login")}
-                    className="mt-1 block w-full rounded-lg bg-emerald-500 py-1.5 text-left text-sm text-white"
+                    className="block w-full rounded-lg bg-emerald-600 py-1.5 text-sm text-white"
                   >
                     Login
                   </button>
                 </>
-              )}
-
-              {isAuthenticated && (
+              ) : (
                 <button
                   onClick={handleLogout}
-                  className="mt-1 block w-full rounded-lg border border-slate-200 bg-white py-1.5 text-left text-sm text-slate-700"
+                  className="block w-full rounded-lg border bg-white py-1.5 text-left text-sm text-slate-800"
                 >
                   Logout
                 </button>

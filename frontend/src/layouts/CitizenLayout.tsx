@@ -1,4 +1,4 @@
-// src/layouts/AdminLayout.tsx
+// src/layouts/CitizenLayout.tsx
 import { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
@@ -10,12 +10,12 @@ function classNames(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-export default function AdminLayout({ children }: Props) {
+export default function CitizenLayout({ children }: Props) {
   const navItems = [
-    { to: "/admin", label: "Dashboard" },
-    { to: "/admin/users", label: "Users & Approvals" },
-    { to: "/admin/pcc", label: "PCC Tokens" },
-    { to: "/admin/contact", label: "Contact Messages" },
+    { to: "/dashboard", label: "Dashboard" },
+    { to: "/training", label: "Training" },
+    { to: "/waste/report", label: "Report Waste" },
+    { to: "/waste/my-reports", label: "My Reports" },
   ];
 
   return (
@@ -25,16 +25,13 @@ export default function AdminLayout({ children }: Props) {
         bg-gradient-to-b from-emerald-50 via-emerald-50 to-slate-50
       "
     >
-      {/* Background glows – same language as LandingPage */}
+      {/* Background glows – aligned with LandingPage */}
       <div className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-80" />
       <div className="pointer-events-none absolute -right-40 top-24 h-72 w-72 rounded-full bg-emerald-200/50 blur-3xl" />
       <div className="pointer-events-none absolute -left-40 top-72 h-72 w-72 rounded-full bg-emerald-100/60 blur-3xl" />
 
-      {/* Content shell */}
       <div className="relative mx-auto flex max-w-6xl gap-6 px-4 pb-10 pt-24 sm:pb-12 sm:pt-28">
-        {/* ----------------------------- */}
-        {/* Desktop Sidebar – liquid glass */}
-        {/* ----------------------------- */}
+        {/* Desktop sidebar – liquid glass */}
         <aside
           className="
             hidden
@@ -51,10 +48,10 @@ export default function AdminLayout({ children }: Props) {
         >
           <div className="mb-5">
             <p className="text-[0.75rem] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Super Admin
+              Citizen
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              City control, approvals, and climate impact across Prakriti.AI.
+              Navigate your daily actions and climate impact.
             </p>
           </div>
 
@@ -78,9 +75,7 @@ export default function AdminLayout({ children }: Props) {
           </nav>
         </aside>
 
-        {/* ----------------------------- */}
-        {/* Mobile top tabs (admin) */}
-        {/* ----------------------------- */}
+        {/* Mobile top tabs */}
         <div className="fixed inset-x-0 top-16 z-30 border-b border-emerald-50 bg-white/95 px-4 py-2 backdrop-blur-md sm:hidden">
           <div className="flex items-center gap-2 overflow-x-auto text-sm">
             {navItems.map((item) => (
@@ -102,11 +97,8 @@ export default function AdminLayout({ children }: Props) {
           </div>
         </div>
 
-        {/* ----------------------------- */}
-        {/* Main Content Area */}
-        {/* ----------------------------- */}
+        {/* Main content */}
         <section className="flex-1">
-          {/* padding so content doesn't hide behind mobile tabs */}
           <div className="pt-14 sm:pt-2">{children}</div>
         </section>
       </div>

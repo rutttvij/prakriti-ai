@@ -18,6 +18,7 @@ import SegregationPage from "./pages/SegregationPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminPccAwardPage } from "./pages/admin/AdminPccAwardPage";
+import { AdminContactMessagesPage } from "./pages/admin/AdminContactMessagesPage";
 
 /* Waste Worker Pages */
 import WorkerLayout from "./layouts/WorkerLayout";
@@ -27,8 +28,8 @@ import { WorkerMyReportsPage } from "./pages/worker/WorkerMyReportsPage";
 
 /* Layout & Auth */
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import RoleAwareLayout from "./layouts/RoleAwareLayout";
 
 /* Global Layout Components */
 import { Navbar } from "./components/Navbar";
@@ -37,12 +38,12 @@ import { BackToTopButton } from "./components/BackToTopButton";
 
 function App() {
   return (
-    <div className="flex min-h-screen flex-col pt-24 bg-white">
-      {/* Floating Navbar */}
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-emerald-50/70 to-white">
+      {/* Global navbar */}
       <Navbar />
 
-      {/* Page Content Wrapper */}
-      <div className="flex-1">
+      {/* Main content area — grows to push footer down */}
+      <main className="flex-1">
         <Routes>
           {/* ---------- PUBLIC ROUTES ---------- */}
           <Route path="/" element={<LandingPage />} />
@@ -51,14 +52,14 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* ---------- USER DASHBOARD ROUTES (CITIZEN / BULK) ---------- */}
+          {/* ---------- USER ROUTES (CITIZEN / BULK / WORKER via RoleAwareLayout) ---------- */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <MainLayout>
+                <RoleAwareLayout>
                   <DashboardPage />
-                </MainLayout>
+                </RoleAwareLayout>
               </ProtectedRoute>
             }
           />
@@ -67,9 +68,9 @@ function App() {
             path="/training"
             element={
               <ProtectedRoute>
-                <MainLayout>
+                <RoleAwareLayout>
                   <TrainingPage />
-                </MainLayout>
+                </RoleAwareLayout>
               </ProtectedRoute>
             }
           />
@@ -78,9 +79,9 @@ function App() {
             path="/waste/report"
             element={
               <ProtectedRoute>
-                <MainLayout>
+                <RoleAwareLayout>
                   <WasteReportPage />
-                </MainLayout>
+                </RoleAwareLayout>
               </ProtectedRoute>
             }
           />
@@ -89,9 +90,9 @@ function App() {
             path="/waste/my-reports"
             element={
               <ProtectedRoute>
-                <MainLayout>
+                <RoleAwareLayout>
                   <MyReportsPage />
-                </MainLayout>
+                </RoleAwareLayout>
               </ProtectedRoute>
             }
           />
@@ -100,14 +101,14 @@ function App() {
             path="/segregation"
             element={
               <ProtectedRoute>
-                <MainLayout>
+                <RoleAwareLayout>
                   <SegregationPage />
-                </MainLayout>
+                </RoleAwareLayout>
               </ProtectedRoute>
             }
           />
 
-          {/* ---------- WASTE WORKER ROUTES ---------- */}
+          {/* ---------- WASTE WORKER ROUTES (dedicated worker area) ---------- */}
           <Route
             path="/worker/dashboard"
             element={
@@ -175,12 +176,23 @@ function App() {
             }
           />
 
+          <Route
+            path="/admin/contact"
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <AdminContactMessagesPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+
           {/* ---------- FALLBACK ---------- */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
+      </main>
 
-      {/* Global Components */}
+      {/* Global footer + back-to-top */}
       <Footer />
       <BackToTopButton />
     </div>

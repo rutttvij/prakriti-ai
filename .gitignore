@@ -20,3 +20,8 @@ uploads/
 # Node modules (for frontend later)
 node_modules/
 dist/
+
+# ML models (local only, not pushed to GitHub)
+backend/app/ml_models/
+# or, if you want the folder tracked but not the weights:
+# backend/app/ml_models/*.pth

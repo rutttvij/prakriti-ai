@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Float,
+    Boolean,
 )
 from sqlalchemy.orm import relationship
 
@@ -36,6 +37,11 @@ class WasteReport(Base):
 
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+
+    # Snapshot of AI classification at time of report
+    classification_label = Column(String, nullable=True)        # e.g. "magazines"
+    classification_confidence = Column(Float, nullable=True)    # 0.0–1.0
+    classification_recyclable = Column(Boolean, nullable=True)  # True / False
 
     status = Column(String, nullable=False, default=WasteReportStatus.OPEN.value)
     created_at = Column(DateTime, default=datetime.utcnow)

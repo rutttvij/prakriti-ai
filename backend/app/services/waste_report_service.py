@@ -53,6 +53,10 @@ def create_waste_report(
     description: Optional[str],
     latitude: Optional[float],
     longitude: Optional[float],
+    # classification snapshot
+    classification_label: Optional[str] = None,
+    classification_confidence: Optional[float] = None,
+    classification_recyclable: Optional[bool] = None,
 ) -> WasteReport:
     reporter = db.query(User).filter(User.id == reporter_id).first()
     if reporter is None:
@@ -67,6 +71,9 @@ def create_waste_report(
         description=description,
         latitude=latitude,
         longitude=longitude,
+        classification_label=classification_label,
+        classification_confidence=classification_confidence,
+        classification_recyclable=classification_recyclable,
         status=WasteReportStatus.OPEN.value,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
@@ -161,5 +168,3 @@ def _handle_resolution_rewards(db: Session, report: WasteReport) -> None:
         reference_id=report.id,
         description=f"Report {human_id} resolved",
     )
-
-    # Carbon engine will mint PCC tokens accordingly.

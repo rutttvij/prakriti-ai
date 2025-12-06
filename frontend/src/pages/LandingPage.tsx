@@ -9,7 +9,8 @@ export const LandingPage: React.FC = () => {
   ];
 
   return (
-    <main className="bg-gradient-to-b from-emerald-50/60 to-white min-h-screen">
+    // Removed `min-h-screen` to avoid forced extra scroll
+    <main className="bg-gradient-to-b from-emerald-50/60 to-white">
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-4 pt-10 pb-16">
         <div className="grid gap-10 md:grid-cols-2 items-center">

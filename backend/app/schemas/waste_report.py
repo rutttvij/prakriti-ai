@@ -19,6 +19,12 @@ class WasteReportRead(BaseModel):
     description: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+
+    # Snapshot of AI classification at time of report
+    classification_label: Optional[str] = None
+    classification_confidence: Optional[float] = None
+    classification_recyclable: Optional[bool] = None
+
     status: str
     created_at: datetime
     updated_at: datetime

@@ -1,14 +1,22 @@
+// frontend/src/types/wasteReport.ts
+
 export type WasteReportStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
 
 export interface WasteReport {
   id: number;
-  public_id?: string | null;       // e.g. "CIT-2-000001", "BULK-5-000003"
+  public_id?: string | null;
 
   reporter_id: number;
   image_path?: string | null;
   description?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+
+  // AI classification snapshot saved with the report
+  classification_label?: string | null;
+  classification_confidence?: number | null;
+  classification_recyclable?: boolean | null;
+
   status: WasteReportStatus;
   created_at: string;
   updated_at: string;

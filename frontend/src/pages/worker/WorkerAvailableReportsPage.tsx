@@ -3,16 +3,19 @@ import api from "../../lib/api";
 import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
 import { BACKEND_ORIGIN } from "../../lib/config";
 
+/* -------------------------------
+   Status badge styling
+-------------------------------- */
 function statusStyles(status: WasteReportStatus) {
   switch (status) {
     case "OPEN":
-      return "bg-amber-50 text-amber-700 border-amber-200";
+      return "bg-amber-50/80 text-amber-700 border-amber-200 shadow-[0_0_6px_rgba(251,191,36,0.25)]";
     case "IN_PROGRESS":
-      return "bg-blue-50 text-blue-700 border-blue-200";
+      return "bg-blue-50/80 text-blue-700 border-blue-200 shadow-[0_0_6px_rgba(59,130,246,0.25)]";
     case "RESOLVED":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      return "bg-emerald-50/80 text-emerald-700 border-emerald-200 shadow-[0_0_6px_rgba(16,185,129,0.25)]";
     default:
-      return "bg-slate-50 text-slate-700 border-slate-200";
+      return "bg-slate-50/80 text-slate-700 border-slate-200";
   }
 }
 
@@ -45,73 +48,106 @@ export function WorkerAvailableReportsPage() {
   async function handleClaim(reportId: number) {
     try {
       setClaimingId(reportId);
-      const res = await api.post<WasteReport>(
-        `/waste/reports/${reportId}/claim`,
-      );
+      const res = await api.post(`/waste/reports/${reportId}/claim`);
       const claimed = res.data;
 
-      // Remove from available list once claimed
+      // Remove once claimed
       setReports((prev) => prev.filter((r) => r.id !== claimed.id));
     } catch (err: any) {
       console.error(err);
-      const detail =
-        err?.response?.data?.detail || "Could not claim this report.";
-      setError(detail);
+      setError(
+        err?.response?.data?.detail || "Could not claim this report."
+      );
     } finally {
       setClaimingId(null);
     }
   }
 
+  /* -------------------------------
+     Loading State
+  -------------------------------- */
   if (loading) {
-    return <p className="text-slate-600">Loading available reports…</p>;
+    return (
+      <div className="animate-pulse text-slate-600 text-sm">
+        Loading available reports…
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-emerald-800">
+    <div className="relative space-y-6">
+      {/* Soft emerald glow */}
+      <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
+
+      {/* Header */}
+      <header className="relative z-10 space-y-1">
+        <h1 className="text-2xl font-bold text-emerald-900">
           Available Reports
         </h1>
         <p className="text-sm text-slate-600">
-          These are open reports that do not yet have a worker. Claim one to
-          start working on it.
+          These are open reports that do not yet have a worker.
+          <br /> Claim one to start working on it.
         </p>
-      </div>
+      </header>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
-
-      {reports.length === 0 && !error && (
-        <p className="text-sm text-slate-500">
-          There are currently no unassigned reports. Great job keeping the city
-          clean!
-        </p>
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 shadow-sm">
+          {error}
+        </div>
       )}
 
-      <div className="space-y-3">
+      {/* Empty state */}
+      {reports.length === 0 && !error && (
+        <div
+          className="
+            rounded-2xl border border-emerald-100 bg-white/70
+            p-6 text-center text-slate-600 shadow-md shadow-emerald-100/50
+            backdrop-blur-sm
+          "
+        >
+          No unassigned reports right now!  
+          <br />
+          <span className="text-emerald-700 font-medium">
+            Great job keeping the city clean 🌿
+          </span>
+        </div>
+      )}
+
+      <div className="space-y-4">
         {reports.map((r) => {
           const created = new Date(r.created_at).toLocaleString();
 
           return (
             <div
               key={r.id}
-              className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-stretch md:justify-between"
+              className="
+                group relative flex flex-col gap-4 rounded-3xl
+                border border-emerald-100/70 bg-white/70
+                p-5 shadow-lg shadow-emerald-100/50
+                backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-emerald-200/70
+                md:flex-row md:items-center
+              "
             >
-              <div className="flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-semibold text-slate-800">
+              {/* Left section: info */}
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm font-semibold text-slate-900">
                     {r.public_id ? `Report ${r.public_id}` : `Report #${r.id}`}
                   </h2>
+
                   <span
-                    className={
-                      "inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium " +
-                      statusStyles(r.status)
-                    }
+                    className={`
+                      inline-flex items-center rounded-full border px-3 py-0.5
+                      text-[0.7rem] font-medium
+                      ${statusStyles(r.status)}
+                    `}
                   >
                     {r.status.replace("_", " ")}
                   </span>
                 </div>
+
                 {r.description && (
-                  <p className="text-sm text-slate-600">{r.description}</p>
+                  <p className="text-sm text-slate-700">{r.description}</p>
                 )}
 
                 <p className="text-xs text-slate-500">
@@ -119,15 +155,23 @@ export function WorkerAvailableReportsPage() {
                   {r.latitude && r.longitude && (
                     <>
                       {" • "}
-                      Location: {r.latitude}, {r.longitude}
+                      Location: {r.latitude.toFixed(5)},{" "}
+                      {r.longitude.toFixed(5)}
                     </>
                   )}
                 </p>
               </div>
 
+              {/* Middle: image */}
               {r.image_path && (
-                <div className="w-full flex-shrink-0 md:w-40">
-                  <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                <div className="w-full md:w-44 flex-shrink-0">
+                  <div
+                    className="
+                      relative overflow-hidden rounded-2xl border border-emerald-100
+                      bg-white/60 shadow-inner shadow-emerald-100/40
+                      backdrop-blur-sm aspect-video
+                    "
+                  >
                     <img
                       src={buildImageUrl(r.image_path)}
                       alt={`Waste report ${r.id}`}
@@ -137,14 +181,18 @@ export function WorkerAvailableReportsPage() {
                 </div>
               )}
 
-              <div className="flex w-full items-center justify-start md:w-40 md:justify-end">
+              {/* Right section: claim button */}
+              <div className="flex justify-start md:justify-end md:w-40">
                 <button
-                  type="button"
                   onClick={() => handleClaim(r.id)}
                   disabled={claimingId === r.id}
-                  className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60 md:w-auto"
+                  className="
+                    rounded-full bg-emerald-600 px-5 py-2
+                    text-sm font-medium text-white shadow-md shadow-emerald-400/40
+                    hover:bg-emerald-700 transition disabled:opacity-60
+                  "
                 >
-                  {claimingId === r.id ? "Claiming…" : "Accept job"}
+                  {claimingId === r.id ? "Claiming…" : "Accept Job"}
                 </button>
               </div>
             </div>

@@ -83,12 +83,14 @@ export const AdminDashboardPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Simple check for super admin role by hitting /auth/me if you want:
-  // For now, we assume ProtectedRoute + backend protection handles it.
-
   const renderCarbonChart = () => {
     if (!carbon || carbon.daily.length === 0) {
-      return <p className="text-xs text-slate-500">No carbon data yet.</p>;
+      return (
+        <p className="mt-4 text-xs text-slate-500">
+          No carbon data yet. Start logging segregation and reports to see
+          trends here.
+        </p>
+      );
     }
 
     const maxValue = Math.max(
@@ -102,13 +104,20 @@ export const AdminDashboardPage: React.FC = () => {
           <span>Last {carbon.daily.length} days</span>
           <span>kg CO₂e / PCC</span>
         </div>
-        <div className="flex items-end gap-1 h-32 bg-emerald-50/60 rounded-lg p-2 overflow-x-auto">
+        <div
+          className="
+            flex h-32 items-end gap-2 overflow-x-auto rounded-2xl
+            bg-gradient-to-r from-emerald-50/80 via-emerald-50/60 to-emerald-100/70
+            p-2
+            shadow-inner
+          "
+        >
           {carbon.daily.map((point) => (
             <div key={point.date} className="flex flex-col items-center">
-              <div className="flex items-end gap-0.5 h-24">
+              <div className="flex h-24 items-end gap-0.5">
                 {/* Carbon bar */}
                 <div
-                  className="w-2 rounded-t-full bg-emerald-500"
+                  className="w-2 rounded-t-full bg-gradient-to-t from-emerald-600 to-emerald-400"
                   style={{
                     height: `${(point.carbon_kg / maxValue) * 100}%`,
                   }}
@@ -116,7 +125,7 @@ export const AdminDashboardPage: React.FC = () => {
                 />
                 {/* PCC bar */}
                 <div
-                  className="w-2 rounded-t-full bg-emerald-300"
+                  className="w-2 rounded-t-full bg-gradient-to-t from-emerald-300 to-emerald-200"
                   style={{
                     height: `${(point.pcc_tokens / maxValue) * 100}%`,
                   }}
@@ -134,7 +143,7 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
         <div className="flex justify-between text-[0.65rem] text-slate-500">
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-600" />
             Carbon (kg CO₂e)
           </span>
           <span className="flex items-center gap-1">
@@ -146,13 +155,99 @@ export const AdminDashboardPage: React.FC = () => {
     );
   };
 
+  const renderCarbonBreakdown = () => {
+    if (!carbon) return null;
+
+    const rolesOrder = ["CITIZEN", "WASTE_WORKER", "BULK_GENERATOR", "SUPER_ADMIN"];
+
+    return (
+      <div className="mt-4 grid gap-3 text-[0.7rem] text-slate-600 md:grid-cols-2">
+        <div
+          className="
+            rounded-2xl border border-emerald-50/80
+            bg-white/80 p-3
+            shadow-sm shadow-emerald-50
+            backdrop-blur-sm
+          "
+        >
+          <h3 className="text-xs font-semibold text-slate-900 mb-2">
+            By role
+          </h3>
+          <div className="space-y-1.5">
+            {rolesOrder.map((roleKey) => {
+              const row = carbon.by_role[roleKey];
+              if (!row) return null;
+              return (
+                <div key={roleKey} className="flex items-center justify-between">
+                  <span className="uppercase tracking-wide text-[0.65rem] text-slate-500">
+                    {roleKey.replace("_", " ")}
+                  </span>
+                  <span className="text-[0.65rem] text-slate-700">
+                    {row.carbon_kg.toFixed(1)} kg · {row.pcc_tokens.toFixed(1)} PCC
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div
+          className="
+            rounded-2xl border border-emerald-50/80
+            bg-white/80 p-3
+            shadow-sm shadow-emerald-50
+            backdrop-blur-sm
+          "
+        >
+          <h3 className="text-xs font-semibold text-slate-900 mb-2">
+            By activity type
+          </h3>
+          <div className="space-y-1.5">
+            {Object.entries(carbon.by_activity_type).map(
+              ([activity, row]) => (
+                <div
+                  key={activity}
+                  className="flex items-center justify-between"
+                >
+                  <span className="text-[0.65rem] capitalize text-slate-500">
+                    {activity.replace("_", " ").toLowerCase()}
+                  </span>
+                  <span className="text-[0.65rem] text-slate-700">
+                    {row.carbon_kg.toFixed(1)} kg ·{" "}
+                    {row.pcc_tokens.toFixed(1)} PCC
+                  </span>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
-    return <p className="text-sm text-slate-600">Loading admin dashboard…</p>;
+    return (
+      <div
+        className="
+          relative rounded-3xl border border-emerald-100/80
+          bg-white/80 px-6 py-5 text-sm text-slate-700
+          shadow-md shadow-emerald-100/70 backdrop-blur-sm
+        "
+      >
+        Loading city dashboard…
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-700">
+      <div
+        className="
+          relative rounded-3xl border border-red-100/80
+          bg-red-50/90 px-6 py-4 text-xs text-red-700
+          shadow-md shadow-red-100
+        "
+      >
         {error}
       </div>
     );
@@ -161,100 +256,167 @@ export const AdminDashboardPage: React.FC = () => {
   if (!summary) return null;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-bold text-slate-800">City Dashboard</h1>
-        <p className="text-xs text-slate-500">
-          Overview of users, operations, and carbon impact across Prakriti.AI.
-        </p>
-      </header>
+    <div className="relative">
+      {/* Soft glow behind header */}
+      <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
 
-      {/* KPI cards */}
-      <section className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-xl border border-emerald-100 bg-white p-3">
-          <div className="text-[0.7rem] font-medium text-slate-500">
-            Total Users
+      <div className="relative space-y-6">
+        {/* Header */}
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/70 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Super Admin · City control
+            </div>
+            <h1 className="mt-3 text-2xl font-bold text-slate-950">
+              City Dashboard
+            </h1>
+            <p className="mt-1 text-xs text-slate-600">
+              Overview of users, operations, and carbon impact across
+              Prakriti.AI.
+            </p>
           </div>
-          <div className="mt-1 text-xl font-semibold text-slate-800">
-            {summary.total_users}
-          </div>
-          <div className="mt-1 text-[0.65rem] text-slate-500">
-            Citizens: {summary.total_citizens} • Workers:{" "}
-            {summary.total_waste_workers} • Bulk:{" "}
-            {summary.total_bulk_generators}
-          </div>
-        </div>
+        </header>
 
-        <div className="rounded-xl border border-amber-100 bg-white p-3">
-          <div className="text-[0.7rem] font-medium text-slate-500">
-            Pending Approvals
-          </div>
-          <div className="mt-1 text-xl font-semibold text-amber-600">
-            {summary.pending_approvals}
-          </div>
-          <div className="mt-1 text-[0.65rem] text-slate-500">
-            Users awaiting activation.
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-sky-100 bg-white p-3">
-          <div className="text-[0.7rem] font-medium text-slate-500">
-            Waste Reports
-          </div>
-          <div className="mt-1 text-xl font-semibold text-slate-800">
-            {summary.total_waste_reports}
-          </div>
-          <div className="mt-1 text-[0.65rem] text-slate-500">
-            Open: {summary.open_waste_reports} • Resolved:{" "}
-            {summary.resolved_waste_reports}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-emerald-100 bg-white p-3">
-          <div className="text-[0.7rem] font-medium text-slate-500">
-            Segregation Score
-          </div>
-          <div className="mt-1 text-xl font-semibold text-emerald-700">
-            {summary.avg_segregation_score
-              ? summary.avg_segregation_score.toFixed(1)
-              : "—"}
-          </div>
-          <div className="mt-1 text-[0.65rem] text-slate-500">
-            Logs: {summary.total_segregation_logs}
-          </div>
-        </div>
-      </section>
-
-      {/* Carbon + PCC */}
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="md:col-span-1 rounded-xl border border-emerald-100 bg-white p-4">
-          <h2 className="text-sm font-semibold text-slate-800">
-            Carbon &amp; PCC Overview
-          </h2>
-          <p className="text-[0.7rem] text-slate-500 mt-1">
-            Total climate impact across all modules.
-          </p>
-          <div className="mt-4 space-y-1">
-            <div className="text-[0.7rem] text-slate-500">Total Carbon</div>
-            <div className="text-lg font-semibold text-emerald-700">
-              {summary.total_carbon_kg.toFixed(1)} kg CO₂e
+        {/* KPI cards */}
+        <section className="grid gap-4 md:grid-cols-4">
+          <div
+            className="
+              rounded-3xl border border-emerald-100/80
+              bg-white/80 p-4
+              shadow-md shadow-emerald-100/70
+              backdrop-blur-sm
+            "
+          >
+            <div className="text-[0.7rem] font-medium text-slate-500">
+              Total Users
+            </div>
+            <div className="mt-1 text-2xl font-semibold text-slate-900">
+              {summary.total_users}
+            </div>
+            <div className="mt-2 text-[0.65rem] text-slate-500">
+              Citizens: {summary.total_citizens} · Workers:{" "}
+              {summary.total_waste_workers} · Bulk:{" "}
+              {summary.total_bulk_generators}
             </div>
           </div>
-          <div className="mt-3 space-y-1">
-            <div className="text-[0.7rem] text-slate-500">Total PCC Tokens</div>
-            <div className="text-lg font-semibold text-emerald-700">
-              {summary.total_pcc_tokens.toFixed(1)} PCC
+
+          <div
+            className="
+              rounded-3xl border border-amber-100/80
+              bg-white/80 p-4
+              shadow-md shadow-amber-100/70
+              backdrop-blur-sm
+            "
+          >
+            <div className="text-[0.7rem] font-medium text-slate-500">
+              Pending approvals
+            </div>
+            <div className="mt-1 text-2xl font-semibold text-amber-600">
+              {summary.pending_approvals}
+            </div>
+            <div className="mt-2 text-[0.65rem] text-slate-500">
+              Users awaiting activation.
             </div>
           </div>
-        </div>
 
-        <div className="md:col-span-2 rounded-xl border border-emerald-100 bg-white p-4">
-          <h2 className="text-sm font-semibold text-slate-800">
-            Carbon &amp; PCC Trend
-          </h2>
-          {renderCarbonChart()}
-        </div>
-      </section>
+          <div
+            className="
+              rounded-3xl border border-sky-100/80
+              bg-white/80 p-4
+              shadow-md shadow-sky-100/70
+              backdrop-blur-sm
+            "
+          >
+            <div className="text-[0.7rem] font-medium text-slate-500">
+              Waste reports
+            </div>
+            <div className="mt-1 text-2xl font-semibold text-slate-900">
+              {summary.total_waste_reports}
+            </div>
+            <div className="mt-2 text-[0.65rem] text-slate-500">
+              Open: {summary.open_waste_reports} · Resolved:{" "}
+              {summary.resolved_waste_reports}
+            </div>
+          </div>
+
+          <div
+            className="
+              rounded-3xl border border-emerald-100/80
+              bg-white/80 p-4
+              shadow-md shadow-emerald-100/70
+              backdrop-blur-sm
+            "
+          >
+            <div className="text-[0.7rem] font-medium text-slate-500">
+              Segregation score
+            </div>
+            <div className="mt-1 text-2xl font-semibold text-emerald-700">
+              {summary.avg_segregation_score
+                ? summary.avg_segregation_score.toFixed(1)
+                : "—"}
+            </div>
+            <div className="mt-2 text-[0.65rem] text-slate-500">
+              Logs: {summary.total_segregation_logs}
+            </div>
+          </div>
+        </section>
+
+        {/* Carbon + PCC overview and trend */}
+        <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <div
+            className="
+              rounded-3xl border border-emerald-100/80
+              bg-white/80 p-4
+              shadow-md shadow-emerald-100/70
+              backdrop-blur-sm
+            "
+          >
+            <h2 className="text-sm font-semibold text-slate-900">
+              Carbon &amp; PCC overview
+            </h2>
+            <p className="mt-1 text-[0.7rem] text-slate-500">
+              Total climate impact across all modules.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <div className="text-[0.7rem] text-slate-500">
+                  Total carbon
+                </div>
+                <div className="text-lg font-semibold text-emerald-700">
+                  {summary.total_carbon_kg.toFixed(1)} kg CO₂e
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[0.7rem] text-slate-500">
+                  Total PCC tokens
+                </div>
+                <div className="text-lg font-semibold text-emerald-700">
+                  {summary.total_pcc_tokens.toFixed(1)} PCC
+                </div>
+              </div>
+            </div>
+
+            {renderCarbonBreakdown()}
+          </div>
+
+          <div
+            className="
+              rounded-3xl border border-emerald-100/80
+              bg-white/80 p-4
+              shadow-md shadow-emerald-100/70
+              backdrop-blur-sm
+            "
+          >
+            <h2 className="text-sm font-semibold text-slate-900">
+              Carbon &amp; PCC trend
+            </h2>
+            {renderCarbonChart()}
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

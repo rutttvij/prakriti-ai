@@ -6,13 +6,13 @@ import { BACKEND_ORIGIN } from "../../lib/config";
 function statusStyles(status: WasteReportStatus) {
   switch (status) {
     case "OPEN":
-      return "bg-amber-50 text-amber-700 border-amber-200";
+      return "bg-amber-50/80 text-amber-700 border-amber-200";
     case "IN_PROGRESS":
-      return "bg-blue-50 text-blue-700 border-blue-200";
+      return "bg-blue-50/80 text-blue-700 border-blue-200";
     case "RESOLVED":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      return "bg-emerald-50/80 text-emerald-700 border-emerald-200";
     default:
-      return "bg-slate-50 text-slate-700 border-slate-200";
+      return "bg-slate-50/80 text-slate-700 border-slate-200";
   }
 }
 
@@ -47,12 +47,11 @@ export function WorkerMyReportsPage() {
       setUpdatingId(reportId);
       const res = await api.patch<WasteReport>(
         `/waste/reports/${reportId}/worker-status`,
-        { status },
+        { status }
       );
+
       const updated = res.data;
-      setReports((prev) =>
-        prev.map((r) => (r.id === updated.id ? updated : r)),
-      );
+      setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
     } catch (err: any) {
       console.error(err);
       const detail =
@@ -64,51 +63,73 @@ export function WorkerMyReportsPage() {
   }
 
   if (loading) {
-    return <p className="text-slate-600">Loading your assigned reports…</p>;
+    return (
+      <p className="text-sm text-slate-600 animate-pulse">
+        Loading your assigned reports…
+      </p>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-emerald-800">
+    <div className="relative space-y-6">
+      {/* Decorative Emerald Glow */}
+      <div className="pointer-events-none absolute inset-x-0 -top-12 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
+
+      {/* HEADER */}
+      <header className="relative z-10 space-y-1">
+        <h1 className="text-2xl font-bold text-emerald-900">
           My Assigned Reports
         </h1>
         <p className="text-sm text-slate-600">
-          Manage the waste reports that are assigned to you. Update their status
-          as you work.
+          Manage your assigned waste reports and update progress in real time.
         </p>
-      </div>
+      </header>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-xs text-red-700 shadow-sm">
+          {error}
+        </div>
+      )}
 
       {reports.length === 0 && !error && (
         <p className="text-sm text-slate-500">
-          You don&apos;t have any assigned reports yet. Claim a report from{" "}
-          <span className="font-medium">Available reports</span>.
+          You don't have any assigned reports yet. Claim one from{" "}
+          <span className="font-semibold text-emerald-700">
+            Available Reports
+          </span>
+          .
         </p>
       )}
 
-      <div className="space-y-3">
+      {/* LIST OF REPORT CARDS */}
+      <div className="relative space-y-4">
         {reports.map((r) => {
           const created = new Date(r.created_at).toLocaleString();
           const resolved = r.resolved_at
             ? new Date(r.resolved_at).toLocaleString()
             : null;
 
-          const canStart =
-            r.status === "OPEN" || r.status === "IN_PROGRESS";
+          const canStart = r.status === "OPEN" || r.status === "IN_PROGRESS";
           const canResolve = r.status !== "RESOLVED";
 
           return (
             <div
               key={r.id}
-              className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-stretch md:justify-between"
+              className="
+                relative z-10 flex flex-col gap-4 rounded-3xl
+                border border-emerald-100/70 bg-white/70
+                shadow-md shadow-emerald-100/60 backdrop-blur-xl
+                p-5 md:flex-row md:items-stretch md:justify-between
+              "
             >
+              {/* LEFT — INFORMATION */}
               <div className="flex-1 space-y-2">
+                {/* Title + Status */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-semibold text-slate-800">
+                  <h2 className="text-sm font-semibold text-slate-900">
                     {r.public_id ? `Report ${r.public_id}` : `Report #${r.id}`}
                   </h2>
+
                   <span
                     className={
                       "inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium " +
@@ -119,10 +140,12 @@ export function WorkerMyReportsPage() {
                   </span>
                 </div>
 
+                {/* Description */}
                 {r.description && (
-                  <p className="text-sm text-slate-600">{r.description}</p>
+                  <p className="text-sm text-slate-700">{r.description}</p>
                 )}
 
+                {/* Metadata */}
                 <p className="text-xs text-slate-500">
                   Created: {created}
                   {resolved && (
@@ -132,16 +155,21 @@ export function WorkerMyReportsPage() {
                   )}
                   {r.latitude && r.longitude && (
                     <>
-                      {" • "}
-                      Location: {r.latitude}, {r.longitude}
+                      {" • "}Location: {r.latitude}, {r.longitude}
                     </>
                   )}
                 </p>
               </div>
 
+              {/* IMAGE */}
               {r.image_path && (
                 <div className="w-full flex-shrink-0 md:w-40">
-                  <div className="relative aspect-video overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                  <div
+                    className="
+                      relative aspect-video overflow-hidden rounded-xl
+                      border border-emerald-100/70 bg-emerald-50/40
+                    "
+                  >
                     <img
                       src={buildImageUrl(r.image_path)}
                       alt={`Waste report ${r.id}`}
@@ -151,22 +179,35 @@ export function WorkerMyReportsPage() {
                 </div>
               )}
 
+              {/* BUTTONS */}
               <div className="flex w-full flex-col items-stretch justify-center gap-2 md:w-44">
+                {/* Mark In Progress */}
                 <button
                   type="button"
                   onClick={() => updateStatus(r.id, "IN_PROGRESS")}
                   disabled={!canStart || updatingId === r.id}
-                  className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-50"
+                  className="
+                    rounded-xl border border-sky-200 bg-sky-50/80 
+                    px-3 py-2 text-sm font-semibold text-sky-800
+                    hover:bg-sky-100/80 disabled:opacity-50
+                  "
                 >
                   {updatingId === r.id && canStart
                     ? "Updating…"
                     : "Mark in progress"}
                 </button>
+
+                {/* Mark Resolved */}
                 <button
                   type="button"
                   onClick={() => updateStatus(r.id, "RESOLVED")}
                   disabled={!canResolve || updatingId === r.id}
-                  className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  className="
+                    rounded-xl bg-emerald-600 px-3 py-2 
+                    text-sm font-semibold text-white
+                    shadow-sm shadow-emerald-400/40
+                    hover:bg-emerald-700 disabled:opacity-50
+                  "
                 >
                   {updatingId === r.id && canResolve
                     ? "Updating…"

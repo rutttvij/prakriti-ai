@@ -1,4 +1,6 @@
+// src/pages/LandingPage.tsx
 import { Link } from "react-router-dom";
+import CtaStrip from "../components/CtaStrip";
 
 const ImpactSnapshotCard: React.FC = () => {
   const stats = [
@@ -491,22 +493,8 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 5️⃣ CTA strip before footer */}
-      <section className="bg-emerald-800">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 sm:flex-row">
-          <p className="max-w-xl text-sm text-emerald-50">
-            Ready to turn waste data into climate action? Start a pilot with
-            Prakriti.AI and watch your segregation and PCC numbers go up month
-            after month.
-          </p>
-          <Link
-            to="/register"
-            className="rounded-full bg-white px-5 py-2 text-xs font-semibold text-emerald-900 shadow-sm shadow-emerald-300/70 transition hover:bg-emerald-50"
-          >
-            Get started – Register
-          </Link>
-        </div>
-      </section>
+      {/* 5️⃣ CTA strip only on landing page */}
+      <CtaStrip />
     </main>
   );
 };

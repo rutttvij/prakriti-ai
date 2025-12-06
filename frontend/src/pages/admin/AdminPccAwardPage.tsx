@@ -1,4 +1,5 @@
 // src/pages/admin/AdminPccAwardPage.tsx
+
 import { type FormEvent, useState } from "react";
 
 const API_BASE_URL =
@@ -91,78 +92,166 @@ export const AdminPccAwardPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <header>
-        <h1 className="text-xl font-bold text-slate-800">PCC Token Console</h1>
-        <p className="text-xs text-slate-500">
-          Manually award PCC tokens for special initiatives, events, or
-          corrections.
-        </p>
-      </header>
+    <div className="relative">
+      {/* soft emerald glow */}
+      <div className="pointer-events-none absolute inset-x-0 -top-10 h-20 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
 
-      <section className="rounded-xl border border-emerald-100 bg-white p-4 max-w-lg">
-        <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="relative space-y-5">
+        {/* Header */}
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
-            <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-              User ID
-            </label>
-            <input
-              type="number"
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="Enter user ID"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-              PCC Tokens
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              value={tokens}
-              onChange={(e) => setTokens(e.target.value)}
-              placeholder="e.g. 10"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-              Reason (optional)
-            </label>
-            <textarea
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              rows={3}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Green volunteer event, school drive, etc."
-            />
-          </div>
-
-          {error && (
-            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error}
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/80 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Super Admin · PCC Tokens
             </div>
-          )}
+            <h1 className="mt-3 text-2xl font-bold text-slate-950">
+              PCC token console
+            </h1>
+            <p className="mt-1 text-xs text-slate-600">
+              Manually award PCC tokens for pilots, events or corrections. Use
+              sparingly and keep a short note for audit.
+            </p>
+          </div>
 
-          {success && (
-            <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-              {success}
+          <div className="mt-1 rounded-2xl border border-emerald-100/80 bg-white/80 px-3 py-2 text-[0.7rem] text-slate-600 shadow-sm shadow-emerald-100/80 backdrop-blur-sm max-w-xs">
+            <p className="font-semibold text-slate-900 mb-1">
+              Quick tips for safe awards
+            </p>
+            <ul className="space-y-0.5 list-disc list-inside">
+              <li>Confirm user ID from Users panel.</li>
+              <li>Record event name in the reason field.</li>
+              <li>Use decimals for partial PCC (e.g. 2.5).</li>
+            </ul>
+          </div>
+        </header>
+
+        {/* Form card */}
+        <section
+          className="
+            max-w-xl
+            rounded-[1.8rem]
+            border border-emerald-100/80
+            bg-white/80
+            px-5 py-5
+            shadow-md shadow-emerald-100/70
+            backdrop-blur-sm
+          "
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-[0.7rem] font-medium text-slate-600">
+                  User ID
+                </label>
+                <input
+                  type="number"
+                  className="
+                    w-full rounded-xl border border-emerald-100/80
+                    bg-white/80 px-3 py-2 text-sm
+                    shadow-sm shadow-emerald-50
+                    focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
+                  "
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="e.g. 42"
+                />
+                <p className="mt-1 text-[0.65rem] text-slate-500">
+                  Find this in the Users &amp; approvals list.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[0.7rem] font-medium text-slate-600">
+                  PCC tokens
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="
+                    w-full rounded-xl border border-emerald-100/80
+                    bg-white/80 px-3 py-2 text-sm
+                    shadow-sm shadow-emerald-50
+                    focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
+                  "
+                  value={tokens}
+                  onChange={(e) => setTokens(e.target.value)}
+                  placeholder="e.g. 10"
+                />
+                <p className="mt-1 text-[0.65rem] text-slate-500">
+                  Use decimals for partial awards (e.g. 1.5 PCC).
+                </p>
+              </div>
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
-          >
-            {loading ? "Awarding…" : "Award PCC Tokens"}
-          </button>
-        </form>
-      </section>
+            <div>
+              <label className="mb-1.5 block text-[0.7rem] font-medium text-slate-600">
+                Reason (optional but recommended)
+              </label>
+              <textarea
+                className="
+                  w-full rounded-2xl border border-emerald-100/80
+                  bg-white/80 px-3 py-2 text-sm
+                  shadow-sm shadow-emerald-50
+                  focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
+                "
+                rows={3}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Green volunteer drive, school clean-up, correction for missed tokens, etc."
+              />
+            </div>
+
+            {/* Alerts */}
+            {error && (
+              <div
+                className="
+                  rounded-2xl border border-red-100/80
+                  bg-red-50/90 px-3 py-2
+                  text-xs text-red-700
+                  shadow-sm shadow-red-100
+                "
+              >
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div
+                className="
+                  rounded-2xl border border-emerald-100/80
+                  bg-emerald-50/90 px-3 py-2
+                  text-xs text-emerald-700
+                  shadow-sm shadow-emerald-100
+                "
+              >
+                {success}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                type="submit"
+                disabled={loading}
+                className="
+                  inline-flex items-center justify-center
+                  rounded-full bg-emerald-700
+                  px-6 py-2.5 text-sm font-semibold text-white
+                  shadow-sm shadow-emerald-400/60
+                  hover:bg-emerald-800
+                  disabled:cursor-not-allowed disabled:opacity-60
+                "
+              >
+                {loading ? "Awarding…" : "Award PCC tokens"}
+              </button>
+
+              <p className="text-[0.7rem] text-slate-500">
+                Awards are logged in the carbon ledger alongside automated PCC
+                from segregation.
+              </p>
+            </div>
+          </form>
+        </section>
+      </div>
     </div>
   );
 };

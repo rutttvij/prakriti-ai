@@ -153,33 +153,33 @@ const RegisterPage: React.FC = () => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Mobile Number
             </label>
             <input
               type="tel"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Ward / Area
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={ward}
               onChange={(e) => setWard(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Address / Landmark (optional)
             </label>
             <textarea
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-2xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               rows={2}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -193,45 +193,45 @@ const RegisterPage: React.FC = () => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Mobile Number
             </label>
             <input
               type="tel"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Worker / Employee ID
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={workerId}
               onChange={(e) => setWorkerId(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Ward / Zone Assigned
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={ward}
               onChange={(e) => setWard(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Organization (e.g. Municipal Corporation)
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={organization}
               onChange={(e) => setOrganization(e.target.value)}
             />
@@ -244,44 +244,44 @@ const RegisterPage: React.FC = () => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Organization / Building Name
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={bulkOrgName}
               onChange={(e) => setBulkOrgName(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Type (Apartment / Hotel / Office / Institution)
             </label>
             <input
               type="text"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={bulkType}
               onChange={(e) => setBulkType(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Contact Mobile
             </label>
             <input
               type="tel"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={bulkContactMobile}
               onChange={(e) => setBulkContactMobile(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
               Address / Ward
             </label>
             <textarea
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full rounded-2xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
               rows={2}
               value={bulkAddressWard}
               onChange={(e) => setBulkAddressWard(e.target.value)}
@@ -294,155 +294,262 @@ const RegisterPage: React.FC = () => {
     return null;
   };
 
+  const roleLabel = (r: Role) =>
+    r === "CITIZEN"
+      ? "Citizen"
+      : r === "WASTE_WORKER"
+      ? "Waste Worker"
+      : "Bulk Generator";
+
   return (
-    <main className="flex justify-center px-4 py-10 bg-emerald-50/50 min-h-[calc(100vh-120px)]">
-      <div className="w-full max-w-lg">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-slate-800">
-            Create your Prakriti.AI account
+    <main
+      className="
+       relative flex-1 flex items-center
+       bg-gradient-to-b from-emerald-50 via-emerald-50 to-slate-50
+       overflow-hidden
+      "
+    >
+
+      {/* Background glows */}
+      <div className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-80" />
+      <div className="pointer-events-none absolute -right-40 top-40 h-64 w-64 rounded-full bg-emerald-200/60 blur-3xl" />
+      <div className="pointer-events-none absolute -left-40 bottom-0 h-64 w-64 rounded-full bg-emerald-100/70 blur-3xl" />
+
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12 md:flex-row md:items-stretch">
+        {/* Left: pitch + role explainer */}
+        <section className="md:w-1/2 space-y-5">
+          <div className="inline-flex items-center rounded-full bg-emerald-50/80 px-3 py-1 text-[0.7rem] font-semibold text-emerald-800 border border-emerald-100 shadow-sm shadow-emerald-100/80">
+            Join Prakriti.AI
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 leading-snug">
+            Create your{" "}
+            <span className="bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
+              Prakriti.AI
+            </span>{" "}
+            account.
           </h1>
-          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+          <p className="text-sm text-slate-700 max-w-md">
             Register as a Citizen, Waste Worker, or Bulk Generator. Your account
-            will be activated after verification by the city admin.
+            will be activated after verification by the city admin — keeping the
+            platform trusted and clean.
           </p>
-        </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white border border-emerald-100 rounded-2xl p-5 space-y-4 shadow-sm"
-        >
-          {/* Role */}
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Role
-            </label>
-            <select
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
-            >
-              <option value="CITIZEN">Citizen</option>
-              <option value="WASTE_WORKER">Waste Worker</option>
-              <option value="BULK_GENERATOR">Bulk Generator</option>
-            </select>
-          </div>
-
-          {/* Common fields */}
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Full Name
-            </label>
-            <input
-              type="text"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Government ID (12-digit)
-              </label>
-              <input
-                type="text"
-                maxLength={12}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                value={governmentId}
-                onChange={(e) => setGovernmentId(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Pincode (6-digit)
-              </label>
-              <input
-                type="text"
-                maxLength={6}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Role-specific */}
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[0.7rem] font-semibold text-slate-500 mb-2">
-              Additional details ({role.replace("_", " ")})
-            </p>
-            <div className="space-y-3">{renderRoleSpecificFields()}</div>
-          </div>
-
-          {error && (
-            <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
-              {success}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed transition"
+          <div
+            className="
+              mt-4 grid gap-3 text-xs text-slate-800
+              rounded-3xl border border-emerald-100/80 bg-white/70 p-4
+              shadow-md shadow-emerald-100/70 backdrop-blur-sm
+            "
           >
-            {submitting ? "Creating account..." : "Register"}
-          </button>
+            <div className="flex gap-3">
+              <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs shadow-sm shadow-emerald-200/80">
+                👤
+              </span>
+              <div>
+                <p className="font-semibold text-slate-900">Citizens</p>
+                <p className="text-[0.7rem] text-slate-600">
+                  Report local waste issues, track resolutions, and earn PCC for
+                  climate-positive behaviour.
+                </p>
+              </div>
+            </div>
 
-          <p className="text-[0.7rem] text-slate-500 text-center">
+            <div className="flex gap-3">
+              <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs shadow-sm shadow-emerald-200/80">
+                🧹
+              </span>
+              <div>
+                <p className="font-semibold text-slate-900">Waste Workers</p>
+                <p className="text-[0.7rem] text-slate-600">
+                  Claim nearby jobs, update status from the field, and close
+                  reports with photo proof.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs shadow-sm shadow-emerald-200/80">
+                🏢
+              </span>
+              <div>
+                <p className="font-semibold text-slate-900">Bulk Generators</p>
+                <p className="text-[0.7rem] text-slate-600">
+                  Log segregation from societies, campuses and offices, and get
+                  ready-made climate reports.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[0.7rem] text-slate-500 max-w-md">
             By creating an account, you agree that your details may be used by
             the city administration to verify your role and track waste
             activity.
           </p>
-        </form>
+        </section>
+
+        {/* Right: glassy registration form */}
+        <section
+          className="
+            md:w-1/2
+            rounded-[1.75rem]
+            border border-emerald-100/80
+            bg-white/80
+            shadow-xl shadow-emerald-200/70
+            backdrop-blur-md
+            p-5 sm:p-6
+          "
+        >
+          {/* Role pills */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {(["CITIZEN", "WASTE_WORKER", "BULK_GENERATOR"] as Role[]).map(
+              (r) => {
+                const active = r === role;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      active
+                        ? "border-emerald-500 bg-emerald-600 text-white shadow-sm shadow-emerald-400/70"
+                        : "border-emerald-100 bg-white/70 text-emerald-800 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {roleLabel(r)}
+                  </button>
+                );
+              }
+            )}
+          </div>
+
+          <p className="text-[0.7rem] text-slate-500 mb-3">
+            You’re registering as{" "}
+            <span className="font-semibold text-emerald-800">
+              {roleLabel(role)}
+            </span>
+            . You can request a role change later via the city admin.
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Common fields */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Full Name
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Government ID (12-digit)
+                </label>
+                <input
+                  type="text"
+                  maxLength={12}
+                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  value={governmentId}
+                  onChange={(e) => setGovernmentId(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Pincode (6-digit)
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Role-specific */}
+            <div className="pt-3 border-t border-emerald-50">
+              <p className="mb-2 text-[0.7rem] font-semibold text-slate-500">
+                Additional details ({roleLabel(role)})
+              </p>
+              <div className="space-y-3">{renderRoleSpecificFields()}</div>
+            </div>
+
+            {error && (
+              <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                {success}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="
+                mt-1 w-full rounded-full
+                bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white
+                shadow-sm shadow-emerald-400/70
+                hover:bg-emerald-700
+                disabled:opacity-60 disabled:cursor-not-allowed
+                transition
+              "
+            >
+              {submitting ? "Creating account..." : "Register with Prakriti.AI"}
+            </button>
+          </form>
+        </section>
       </div>
     </main>
   );

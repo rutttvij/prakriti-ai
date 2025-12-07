@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 type Role = "CITIZEN" | "WASTE_WORKER" | "BULK_GENERATOR";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -83,13 +83,13 @@ const RegisterPage: React.FC = () => {
     const meta: Record<string, string> = {};
 
     if (role === "CITIZEN") {
-      if (mobile) meta.mobile = mobile;
+      if (mobile) meta.phone = mobile;
       if (ward) meta.ward = ward;
       if (address) meta.address = address;
     }
 
     if (role === "WASTE_WORKER") {
-      if (mobile) meta.mobile = mobile;
+      if (mobile) meta.phone = mobile;
       if (workerId) meta.worker_id = workerId;
       if (ward) meta.ward_zone = ward;
       if (organization) meta.organization = organization;
@@ -309,7 +309,6 @@ const RegisterPage: React.FC = () => {
        overflow-hidden
       "
     >
-
       {/* Background glows */}
       <div className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-80" />
       <div className="pointer-events-none absolute -right-40 top-40 h-64 w-64 rounded-full bg-emerald-200/60 blur-3xl" />

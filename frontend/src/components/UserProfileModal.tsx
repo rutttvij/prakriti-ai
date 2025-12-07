@@ -17,10 +17,10 @@ type UserProfile = {
   role?: string | null;
 
   // meta fields
-  phone?: string | null;
-  address?: string | null;
-  city?: string | null;
-  ward?: string | null;
+  phone?: string | null; // Mobile Number
+  address?: string | null; // Address / Landmark (optional)
+  city?: string | null; // kept in state but not shown in UI now
+  ward?: string | null; // Ward / Area
 };
 
 export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
@@ -99,7 +99,6 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
       const payload: any = {
         full_name: form.full_name,
         phone: form.phone,
-        city: form.city,
         ward: form.ward,
         address: form.address,
       };
@@ -148,9 +147,11 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="border-b border-emerald-50/80 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-emerald-50/80 px-6 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Your profile</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Your profile
+            </h2>
             <p className="text-[0.7rem] text-slate-500">
               Review your registered details and update personal information.
             </p>
@@ -164,7 +165,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
         </div>
 
         {/* Body */}
-        <div className="max-h-[65vh] overflow-y-auto px-6 py-4 space-y-4">
+        <div className="max-h-[65vh] overflow-y-auto space-y-4 px-6 py-4">
           {loading ? (
             <p className="text-xs text-slate-500">Loading profile…</p>
           ) : (
@@ -172,9 +173,10 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
               {/* User summary */}
               <div
                 className="
-                  rounded-2xl border border-emerald-50/80 bg-gradient-to-r
-                  from-emerald-50/80 via-white/80 to-emerald-50/70 px-4 py-3
-                  flex items-center justify-between gap-3 backdrop-blur-sm
+                  flex items-center justify-between gap-3
+                  rounded-2xl border border-emerald-50/80
+                  bg-gradient-to-r from-emerald-50/80 via-white/80 to-emerald-50/70
+                  px-4 py-3 backdrop-blur-sm
                 "
               >
                 <div>
@@ -193,8 +195,8 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
               <div className="grid gap-4">
                 {/* Full name */}
                 <div>
-                  <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-                    Full name
+                  <label className="mb-1 block text-[0.7rem] font-medium text-slate-600">
+                    Full Name
                   </label>
                   <input
                     type="text"
@@ -204,10 +206,10 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                   />
                 </div>
 
-                {/* Phone */}
+                {/* Mobile Number */}
                 <div>
-                  <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-                    Phone
+                  <label className="mb-1 block text-[0.7rem] font-medium text-slate-600">
+                    Mobile Number
                   </label>
                   <input
                     type="text"
@@ -217,49 +219,22 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                   />
                 </div>
 
-                {/* Pincode + City */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-                      Pincode
-                    </label>
-                    <input
-                      type="text"
-                      value={form.pincode ?? ""}
-                      onChange={(e) => handleChange("pincode", e.target.value)}
-                      className="w-full rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      value={form.city ?? ""}
-                      onChange={(e) => handleChange("city", e.target.value)}
-                      className="w-full rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Address */}
+                {/* Pincode */}
                 <div>
-                  <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
-                    Address
+                  <label className="mb-1 block text-[0.7rem] font-medium text-slate-600">
+                    Pincode (6-digit)
                   </label>
-                  <textarea
-                    rows={2}
-                    value={form.address ?? ""}
-                    onChange={(e) => handleChange("address", e.target.value)}
-                    className="w-full rounded-2xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                  <input
+                    type="text"
+                    value={form.pincode ?? ""}
+                    onChange={(e) => handleChange("pincode", e.target.value)}
+                    className="w-full rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
                   />
                 </div>
 
-                {/* Ward */}
+                {/* Ward / Area */}
                 <div>
-                  <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
+                  <label className="mb-1 block text-[0.7rem] font-medium text-slate-600">
                     Ward / Area (optional)
                   </label>
                   <input
@@ -270,10 +245,23 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                   />
                 </div>
 
+                {/* Address / Landmark */}
+                <div>
+                  <label className="mb-1 block text-[0.7rem] font-medium text-slate-600">
+                    Address / Landmark (optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={form.address ?? ""}
+                    onChange={(e) => handleChange("address", e.target.value)}
+                    className="w-full rounded-2xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                  />
+                </div>
+
                 {/* Read-only email & role */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
+                    <label className="mb-1 block text-[0.7rem] font-medium text-slate-600">
                       Email (login)
                     </label>
                     <input
@@ -284,7 +272,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                   </div>
 
                   <div>
-                    <label className="block text-[0.7rem] font-medium text-slate-600 mb-1">
+                    <label className="mb-1 block text-[0.7rem] font-medium text-slate-600">
                       Role
                     </label>
                     <input
@@ -297,7 +285,9 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
               </div>
 
               {/* Messages */}
-              {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}
+              {errorMsg && (
+                <p className="text-xs text-red-600">{errorMsg}</p>
+              )}
               {successMsg && (
                 <p className="text-xs text-emerald-700">{successMsg}</p>
               )}
@@ -306,7 +296,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-emerald-50/80 px-6 py-3 flex justify-end gap-3 bg-white/70 backdrop-blur-md">
+        <div className="flex justify-end gap-3 border-t border-emerald-50/80 bg-white/70 px-6 py-3 backdrop-blur-md">
           <button
             onClick={onClose}
             className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-600"

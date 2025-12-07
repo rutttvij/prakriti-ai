@@ -17,15 +17,19 @@ function navLinkClass(isActive: boolean) {
 export default function WorkerLayout({ children }: WorkerLayoutProps) {
   return (
     <div className="mx-auto flex max-w-6xl gap-6 px-4 pb-10 pt-4 sm:pb-12 sm:pt-6">
+      {/* ----------------------------- */}
+      {/* Desktop sidebar */}
+      {/* ----------------------------- */}
       <aside className="hidden w-64 flex-shrink-0 rounded-3xl border border-emerald-50 bg-white/90 p-5 text-sm text-slate-700 shadow-sm backdrop-blur md:block">
         <div className="mb-5">
           <p className="text-[0.75rem] font-semibold uppercase tracking-wide text-emerald-700">
             Waste Worker
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Claim jobs, update status & close reports.
+            Claim jobs, update status &amp; close reports.
           </p>
         </div>
+
         <nav className="space-y-1.5">
           <NavLink
             to="/worker/dashboard"
@@ -33,24 +37,37 @@ export default function WorkerLayout({ children }: WorkerLayoutProps) {
           >
             Dashboard
           </NavLink>
+
           <NavLink
             to="/worker/reports/available"
             className={({ isActive }) => navLinkClass(isActive)}
           >
             Available reports
           </NavLink>
+
           <NavLink
             to="/worker/reports/my"
             className={({ isActive }) => navLinkClass(isActive)}
           >
             My assigned reports
           </NavLink>
+
+          {/* ➕ New: Segregation logs */}
+          <NavLink
+            to="/worker/segregation"
+            className={({ isActive }) => navLinkClass(isActive)}
+          >
+            Segregation logs
+          </NavLink>
         </nav>
       </aside>
 
+      {/* ----------------------------- */}
+      {/* Main content */}
+      {/* ----------------------------- */}
       <main className="flex-1">
         {/* Small-screen top nav */}
-        <div className="mb-4 flex gap-2 md:hidden">
+        <div className="mb-4 flex flex-wrap gap-2 md:hidden">
           <NavLink
             to="/worker/dashboard"
             className={({ isActive }) =>
@@ -64,6 +81,7 @@ export default function WorkerLayout({ children }: WorkerLayoutProps) {
           >
             Dashboard
           </NavLink>
+
           <NavLink
             to="/worker/reports/available"
             className={({ isActive }) =>
@@ -77,6 +95,7 @@ export default function WorkerLayout({ children }: WorkerLayoutProps) {
           >
             Available
           </NavLink>
+
           <NavLink
             to="/worker/reports/my"
             className={({ isActive }) =>
@@ -89,6 +108,21 @@ export default function WorkerLayout({ children }: WorkerLayoutProps) {
             }
           >
             My reports
+          </NavLink>
+
+          {/* ➕ New: Segregation (mobile) */}
+          <NavLink
+            to="/worker/segregation"
+            className={({ isActive }) =>
+              [
+                "flex-1 rounded-full border px-3 py-2 text-center text-sm font-medium",
+                isActive
+                  ? "bg-emerald-600 text-white border-emerald-600"
+                  : "bg-white text-slate-700 border-slate-200",
+              ].join(" ")
+            }
+          >
+            Segregation
           </NavLink>
         </div>
 

@@ -28,14 +28,24 @@ export default function WorkerSegregationPage() {
   // Restrict page to waste workers
   if (user && user.role !== "WASTE_WORKER") {
     return (
-      <div className="max-w-xl mx-auto">
-        <h1 className="text-2xl font-semibold text-emerald-800 mb-2">
-          Segregation dashboard
-        </h1>
-        <p className="text-sm text-slate-600">
-          This view is meant for waste workers to log daily segregation quality
-          across households and bulk generators.
-        </p>
+      <div className="min-h-[60vh] bg-gradient-to-b from-emerald-50/70 to-white flex items-center">
+        <div className="max-w-xl mx-auto rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-6">
+          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-3">
+            Segregation workspace
+          </span>
+          <h1 className="text-2xl font-semibold text-emerald-900 mb-2">
+            Segregation dashboard
+          </h1>
+          <p className="text-sm text-slate-600">
+            This view is meant for registered{" "}
+            <span className="font-semibold text-emerald-800">
+              Waste Workers
+            </span>{" "}
+            to log daily segregation quality across households and bulk
+            generators. Please switch to a waste worker account or contact your
+            city admin if you think this is a mistake.
+          </p>
+        </div>
       </div>
     );
   }
@@ -108,7 +118,8 @@ export default function WorkerSegregationPage() {
   }
 
   const stats = useMemo(() => {
-    if (logs.length === 0) return { totalLogs: 0, avgScore: 0, uniqueHouseholds: 0 };
+    if (logs.length === 0)
+      return { totalLogs: 0, avgScore: 0, uniqueHouseholds: 0 };
 
     const totalLogs = logs.length;
     const avgScore =
@@ -136,205 +147,293 @@ export default function WorkerSegregationPage() {
   }, [logs]);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-emerald-800">
-            Segregation dashboard
-          </h1>
-          <p className="text-sm text-slate-600">
-            Record daily segregation by weight (kg). Every compliant log boosts
-            your PCC reward and carbon efficiency score.
-          </p>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase text-slate-500">Total logs</p>
-          <p className="mt-2 text-2xl font-semibold text-emerald-800">
-            {stats.totalLogs}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase text-slate-500">Avg score</p>
-          <p className="mt-2 text-2xl font-semibold text-emerald-800">
-            {stats.avgScore}%
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs uppercase text-slate-500">Unique sites</p>
-          <p className="mt-2 text-2xl font-semibold text-emerald-800">
-            {stats.uniqueHouseholds}
-          </p>
-        </div>
-      </div>
-
-      {/* Form + Chart */}
-      <div className="grid gap-4 lg:grid-cols-[1.2fr,1fr]">
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4"
-        >
-          <h2 className="text-sm font-semibold text-emerald-800">
-            Record today's segregation
-          </h2>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="text-sm text-slate-700">Date</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-700">Household ID</label>
-              <input
-                type="text"
-                value={householdId}
-                onChange={(e) => setHouseholdId(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                placeholder="101"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <div>
-              <label className="text-sm text-slate-700">Dry (kg)</label>
-              <input
-                type="number"
-                value={dryKg}
-                onChange={(e) => setDryKg(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-700">Wet (kg)</label>
-              <input
-                type="number"
-                value={wetKg}
-                onChange={(e) => setWetKg(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-700">Reject (kg)</label>
-              <input
-                type="number"
-                value={rejectKg}
-                onChange={(e) => setRejectKg(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
+    <div className="min-h-[70vh] bg-gradient-to-b from-emerald-50/70 to-white -m-4 p-4 md:p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <label className="text-sm text-slate-700">Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              placeholder="Additional notes..."
-            />
+            <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-2">
+              Waste Worker · Daily Segregation
+            </span>
+            <h1 className="text-2xl md:text-3xl font-semibold text-emerald-900">
+              Segregation dashboard
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 max-w-2xl">
+              Record daily segregation by weight (kg). Every compliant log
+              boosts your PCC rewards and helps your city track real-time
+              carbon savings.
+            </p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+              Total logs
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-900">
+              {stats.totalLogs}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Across all households you&apos;ve covered.
+            </p>
           </div>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white shadow-sm p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+              Avg segregation score
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-900">
+              {stats.avgScore}%
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Average quality based on your recent logs.
+            </p>
+          </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+          <div className="rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+              Unique sites covered
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-900">
+              {stats.uniqueHouseholds}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Households / bulk generators you&apos;ve visited.
+            </p>
+          </div>
+        </div>
+
+        {/* Form + Chart */}
+        <div className="grid gap-4 lg:grid-cols-[1.2fr,1fr]">
+          {/* Form */}
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5 space-y-4"
           >
-            {submitting ? "Saving..." : "Save log"}
-          </button>
-        </form>
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold text-emerald-900">
+                Record today&apos;s segregation
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                All weights are in kilograms (kg)
+              </p>
+            </div>
 
-        {/* Chart */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-emerald-800 mb-2">
-            14-day compliance trend
-          </h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                />
+              </div>
 
-          {trendData.length === 0 ? (
-            <p className="text-xs text-slate-500">
-              Start logging to see your compliance trend.
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Household / Site ID
+                </label>
+                <input
+                  type="text"
+                  value={householdId}
+                  onChange={(e) => setHouseholdId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                  placeholder="e.g. 101"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Dry (kg)
+                </label>
+                <input
+                  type="number"
+                  value={dryKg}
+                  onChange={(e) => setDryKg(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Wet (kg)
+                </label>
+                <input
+                  type="number"
+                  value={wetKg}
+                  onChange={(e) => setWetKg(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Reject (kg)
+                </label>
+                <input
+                  type="number"
+                  value={rejectKg}
+                  onChange={(e) => setRejectKg(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Notes (optional)
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                placeholder="Missed pickup, contamination notes, building name…"
+              />
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                {error}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <p className="text-[11px] text-slate-500">
+                Logs are locked after 24 hours to keep the data trusted.
+              </p>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center rounded-full bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed transition"
+              >
+                {submitting ? "Saving…" : "Save log"}
+              </button>
+            </div>
+          </form>
+
+          {/* Chart */}
+          <div className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5">
+            <h2 className="text-sm font-semibold text-emerald-900 mb-2">
+              14-day compliance trend
+            </h2>
+
+            {trendData.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-emerald-100 bg-emerald-50/60 px-4 py-6 text-center">
+                <p className="text-xs font-medium text-emerald-800">
+                  No logs yet.
+                </p>
+                <p className="mt-1 text-xs text-emerald-700/80">
+                  Start recording today&apos;s segregation to see how your
+                  route&apos;s quality improves over time.
+                </p>
+              </div>
+            ) : (
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" fontSize={10} />
+                    <YAxis domain={[0, 100]} fontSize={10} />
+                    <Tooltip formatter={(v: number) => [`${v}%`, "Score"]} />
+                    <Line
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Logs */}
+        <div className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <h2 className="text-sm font-semibold text-emerald-900">
+              Recent logs
+            </h2>
+            <p className="text-[11px] text-slate-500">
+              Showing your last {Math.min(logs.length, 20)} entries
+            </p>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-slate-600">Loading your logs…</p>
+          ) : logs.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              No logs recorded yet. Use the form above to add your first
+              segregation entry for today.
             </p>
           ) : (
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" fontSize={10} />
-                  <YAxis domain={[0, 100]} fontSize={10} />
-                  <Tooltip formatter={(v: number) => [`${v}%`, "Score"]} />
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="min-w-full text-sm">
+                <thead className="bg-emerald-50/80">
+                  <tr className="border-b border-emerald-100 text-xs text-slate-600">
+                    <th className="py-2.5 pr-4 pl-4 text-left font-medium">
+                      Date
+                    </th>
+                    <th className="py-2.5 px-4 text-left font-medium">
+                      Household / Site
+                    </th>
+                    <th className="py-2.5 px-4 text-right font-medium">
+                      Dry (kg)
+                    </th>
+                    <th className="py-2.5 px-4 text-right font-medium">
+                      Wet (kg)
+                    </th>
+                    <th className="py-2.5 px-4 text-right font-medium">
+                      Reject (kg)
+                    </th>
+                    <th className="py-2.5 pr-4 pl-4 text-right font-medium">
+                      Score
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {logs.slice(0, 20).map((log) => (
+                    <tr
+                      key={log.id}
+                      className="border-b border-slate-100 last:border-0 hover:bg-emerald-50/40 transition-colors"
+                    >
+                      <td className="py-2.5 pr-4 pl-4 text-slate-700">
+                        {log.log_date}
+                      </td>
+                      <td className="py-2.5 px-4 text-slate-700">
+                        {log.household_id}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-slate-700">
+                        {log.dry_kg.toFixed(1)}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-slate-700">
+                        {log.wet_kg.toFixed(1)}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-slate-700">
+                        {log.reject_kg.toFixed(1)}
+                      </td>
+                      <td className="py-2.5 pr-4 pl-4 text-right">
+                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                          {log.segregation_score}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
-      </div>
-
-      {/* Recent Logs */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-emerald-800 mb-3">
-          Recent logs
-        </h2>
-
-        {loading ? (
-          <p className="text-sm">Loading...</p>
-        ) : logs.length === 0 ? (
-          <p className="text-sm text-slate-500">No logs recorded yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b text-xs text-slate-500">
-                  <th className="py-2 pr-4 text-left">Date</th>
-                  <th className="py-2 px-4 text-left">Household</th>
-                  <th className="py-2 px-4 text-right">Dry</th>
-                  <th className="py-2 px-4 text-right">Wet</th>
-                  <th className="py-2 px-4 text-right">Reject</th>
-                  <th className="py-2 pl-4 text-right">Score</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {logs.slice(0, 20).map((log) => (
-                  <tr key={log.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4">{log.log_date}</td>
-                    <td className="py-2 px-4">{log.household_id}</td>
-                    <td className="py-2 px-4 text-right">{log.dry_kg.toFixed(1)}</td>
-                    <td className="py-2 px-4 text-right">{log.wet_kg.toFixed(1)}</td>
-                    <td className="py-2 px-4 text-right">{log.reject_kg.toFixed(1)}</td>
-                    <td className="py-2 pl-4 text-right">
-                      <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                        {log.segregation_score}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </div>
   );

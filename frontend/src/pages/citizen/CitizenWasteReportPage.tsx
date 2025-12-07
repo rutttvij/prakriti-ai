@@ -1,6 +1,6 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
-import api from "../lib/api";
-import type { WasteReport } from "../types/wasteReport";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import api from "../../lib/api";
+import type { WasteReport } from "../../types/wasteReport";
 
 interface WasteClassificationResult {
   id: string;

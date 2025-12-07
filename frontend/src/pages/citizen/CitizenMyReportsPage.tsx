@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import api from "../lib/api";
-import type { WasteReport, WasteReportStatus } from "../types/wasteReport";
-import { BACKEND_ORIGIN } from "../lib/config";
+import api from "../../lib/api";
+import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
+import { BACKEND_ORIGIN } from "../../lib/config";
 
 interface WasteClassificationSummary {
   id: string;

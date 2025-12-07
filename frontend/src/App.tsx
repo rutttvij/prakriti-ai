@@ -7,12 +7,11 @@ import { ContactPage } from "./pages/ContactPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 
-/* Protected Pages (Citizen / Bulk / General) */
-import DashboardPage from "./pages/DashboardPage";
-import TrainingPage from "./pages/TrainingPage";
-import WasteReportPage from "./pages/WasteReportPage";
-import MyReportsPage from "./pages/MyReportsPage";
-import SegregationPage from "./pages/SegregationPage";
+/* Citizen Pages */
+import CitizenDashboardPage from "./pages/citizen/CitizenDashboardPage";
+import CitizenTrainingPage from "./pages/citizen/CitizenTrainingPage";
+import CitizenWasteReportPage from "./pages/citizen/CitizenWasteReportPage";
+import CitizenMyReportsPage from "./pages/citizen/CitizenMyReportsPage";
 
 /* Admin Pages */
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
@@ -20,16 +19,17 @@ import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminPccAwardPage } from "./pages/admin/AdminPccAwardPage";
 import { AdminContactMessagesPage } from "./pages/admin/AdminContactMessagesPage";
 
-/* Waste Worker Pages */
+/* Worker Pages */
 import WorkerLayout from "./layouts/WorkerLayout";
 import { WorkerDashboardPage } from "./pages/worker/WorkerDashboardPage";
 import { WorkerAvailableReportsPage } from "./pages/worker/WorkerAvailableReportsPage";
 import { WorkerMyReportsPage } from "./pages/worker/WorkerMyReportsPage";
+import WorkerSegregationPage from "./pages/worker/WorkerSegregationPage";
 
 /* Layout & Auth */
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import CitizenLayout from "./layouts/CitizenLayout";
 import AdminLayout from "./layouts/AdminLayout";
-import RoleAwareLayout from "./layouts/RoleAwareLayout";
 
 /* Global Layout Components */
 import { Navbar } from "./components/Navbar";
@@ -52,14 +52,14 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* ---------- USER ROUTES (CITIZEN / BULK / WORKER via RoleAwareLayout) ---------- */}
+          {/* ---------- CITIZEN ROUTES ---------- */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <RoleAwareLayout>
-                  <DashboardPage />
-                </RoleAwareLayout>
+                <CitizenLayout>
+                  <CitizenDashboardPage />
+                </CitizenLayout>
               </ProtectedRoute>
             }
           />
@@ -68,9 +68,9 @@ function App() {
             path="/training"
             element={
               <ProtectedRoute>
-                <RoleAwareLayout>
-                  <TrainingPage />
-                </RoleAwareLayout>
+                <CitizenLayout>
+                  <CitizenTrainingPage />
+                </CitizenLayout>
               </ProtectedRoute>
             }
           />
@@ -79,9 +79,9 @@ function App() {
             path="/waste/report"
             element={
               <ProtectedRoute>
-                <RoleAwareLayout>
-                  <WasteReportPage />
-                </RoleAwareLayout>
+                <CitizenLayout>
+                  <CitizenWasteReportPage />
+                </CitizenLayout>
               </ProtectedRoute>
             }
           />
@@ -90,25 +90,14 @@ function App() {
             path="/waste/my-reports"
             element={
               <ProtectedRoute>
-                <RoleAwareLayout>
-                  <MyReportsPage />
-                </RoleAwareLayout>
+                <CitizenLayout>
+                  <CitizenMyReportsPage />
+                </CitizenLayout>
               </ProtectedRoute>
             }
           />
 
-          <Route
-            path="/segregation"
-            element={
-              <ProtectedRoute>
-                <RoleAwareLayout>
-                  <SegregationPage />
-                </RoleAwareLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ---------- WASTE WORKER ROUTES (dedicated worker area) ---------- */}
+          {/* ---------- WASTE WORKER ROUTES ---------- */}
           <Route
             path="/worker/dashboard"
             element={
@@ -137,6 +126,17 @@ function App() {
               <ProtectedRoute>
                 <WorkerLayout>
                   <WorkerMyReportsPage />
+                </WorkerLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/worker/segregation"
+            element={
+              <ProtectedRoute>
+                <WorkerLayout>
+                  <WorkerSegregationPage />
                 </WorkerLayout>
               </ProtectedRoute>
             }

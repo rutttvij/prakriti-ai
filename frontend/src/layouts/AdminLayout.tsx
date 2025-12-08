@@ -25,16 +25,19 @@ export default function AdminLayout({ children }: Props) {
         bg-gradient-to-b from-emerald-50 via-emerald-50 to-slate-50
       "
     >
-      {/* Background glows – same language as LandingPage */}
+      {/* Background Glows */}
       <div className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-80" />
       <div className="pointer-events-none absolute -right-40 top-24 h-72 w-72 rounded-full bg-emerald-200/50 blur-3xl" />
       <div className="pointer-events-none absolute -left-40 top-72 h-72 w-72 rounded-full bg-emerald-100/60 blur-3xl" />
 
-      {/* Content shell */}
-      <div className="relative mx-auto flex max-w-6xl gap-6 px-4 pb-10 pt-24 sm:pb-12 sm:pt-28">
-        {/* ----------------------------- */}
-        {/* Desktop Sidebar – liquid glass */}
-        {/* ----------------------------- */}
+      {/* Shell */}
+      <div
+        className="
+          relative mx-auto flex max-w-6xl items-start
+          gap-6 px-4 pb-10 pt-24 sm:pb-12 sm:pt-28
+        "
+      >
+        {/* Sidebar */}
         <aside
           className="
             hidden
@@ -78,9 +81,7 @@ export default function AdminLayout({ children }: Props) {
           </nav>
         </aside>
 
-        {/* ----------------------------- */}
-        {/* Mobile top tabs (admin) */}
-        {/* ----------------------------- */}
+        {/* Mobile Tabs */}
         <div className="fixed inset-x-0 top-16 z-30 border-b border-emerald-50 bg-white/95 px-4 py-2 backdrop-blur-md sm:hidden">
           <div className="flex items-center gap-2 overflow-x-auto text-sm">
             {navItems.map((item) => (
@@ -102,11 +103,8 @@ export default function AdminLayout({ children }: Props) {
           </div>
         </div>
 
-        {/* ----------------------------- */}
-        {/* Main Content Area */}
-        {/* ----------------------------- */}
+        {/* Main Content */}
         <section className="flex-1">
-          {/* padding so content doesn't hide behind mobile tabs */}
           <div className="pt-14 sm:pt-2">{children}</div>
         </section>
       </div>

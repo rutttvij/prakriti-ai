@@ -12,6 +12,7 @@ import CitizenDashboardPage from "./pages/citizen/CitizenDashboardPage";
 import CitizenTrainingPage from "./pages/citizen/CitizenTrainingPage";
 import CitizenWasteReportPage from "./pages/citizen/CitizenWasteReportPage";
 import CitizenMyReportsPage from "./pages/citizen/CitizenMyReportsPage";
+import CitizenHouseholdPage from "./pages/citizen/CitizenHouseholdPage";
 
 /* Admin Pages */
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
@@ -92,6 +93,17 @@ function App() {
               <ProtectedRoute>
                 <CitizenLayout>
                   <CitizenMyReportsPage />
+                </CitizenLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/citizen/household"
+            element={
+              <ProtectedRoute>
+                <CitizenLayout>
+                  <CitizenHouseholdPage />
                 </CitizenLayout>
               </ProtectedRoute>
             }

@@ -28,8 +28,7 @@ export default function RoleAwareLayout({ children }: Props) {
       return <WorkerLayout>{children}</WorkerLayout>;
 
     case "SUPER_ADMIN":
-      // Usually super admins use the dedicated /admin routes,
-      // but if they hit /dashboard etc, give them the admin shell.
+      // If a super admin hits citizen routes, still give them the admin shell
       return <AdminLayout>{children}</AdminLayout>;
 
     default:

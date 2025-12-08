@@ -51,13 +51,11 @@ export function WorkerAvailableReportsPage() {
       const res = await api.post(`/waste/reports/${reportId}/claim`);
       const claimed = res.data;
 
-      // Remove once claimed
+      // Remove from list after claiming
       setReports((prev) => prev.filter((r) => r.id !== claimed.id));
     } catch (err: any) {
       console.error(err);
-      setError(
-        err?.response?.data?.detail || "Could not claim this report."
-      );
+      setError(err?.response?.data?.detail || "Could not claim this report.");
     } finally {
       setClaimingId(null);
     }
@@ -72,6 +70,7 @@ export function WorkerAvailableReportsPage() {
         Loading available reports…
       </div>
     );
+    ``;
   }
 
   return (
@@ -105,7 +104,7 @@ export function WorkerAvailableReportsPage() {
             backdrop-blur-sm
           "
         >
-          No unassigned reports right now!  
+          No unassigned reports right now!
           <br />
           <span className="text-emerald-700 font-medium">
             Great job keeping the city clean 🌿

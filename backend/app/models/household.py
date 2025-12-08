@@ -29,7 +29,11 @@ class Household(Base):
     # who registered / primary contact
     owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # flags
     is_bulk_generator = Column(Boolean, default=False)
+    # multi-household support: one primary per user (optional but recommended)
+    is_primary = Column(Boolean, default=False)
 
     owner = relationship(User, backref="owned_households")
     segregation_logs = relationship("SegregationLog", back_populates="household")

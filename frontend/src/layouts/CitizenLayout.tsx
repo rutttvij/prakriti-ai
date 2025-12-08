@@ -1,4 +1,3 @@
-// src/layouts/CitizenLayout.tsx
 import { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
@@ -13,6 +12,7 @@ function classNames(...classes: (string | false | null | undefined)[]) {
 export default function CitizenLayout({ children }: Props) {
   const navItems = [
     { to: "/dashboard", label: "Dashboard" },
+    { to: "/citizen/household", label: "Home & Household" },
     { to: "/training", label: "Training" },
     { to: "/waste/report", label: "Report Waste" },
     { to: "/waste/my-reports", label: "My Reports" },
@@ -30,7 +30,12 @@ export default function CitizenLayout({ children }: Props) {
       <div className="pointer-events-none absolute -right-40 top-24 h-72 w-72 rounded-full bg-emerald-200/50 blur-3xl" />
       <div className="pointer-events-none absolute -left-40 top-72 h-72 w-72 rounded-full bg-emerald-100/60 blur-3xl" />
 
-      <div className="relative mx-auto flex max-w-6xl gap-6 px-4 pb-10 pt-24 sm:pb-12 sm:pt-28">
+      <div
+        className="
+          relative mx-auto flex max-w-6xl items-start
+          gap-6 px-4 pb-10 pt-24 sm:pb-12 sm:pt-28
+        "
+      >
         {/* Desktop sidebar – liquid glass */}
         <aside
           className="

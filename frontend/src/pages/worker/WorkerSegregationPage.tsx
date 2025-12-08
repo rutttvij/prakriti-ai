@@ -1,7 +1,9 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import { useAuth } from "../../contexts/AuthContext";
 import type { SegregationLog } from "../../types/segregation";
+import type { WasteReport } from "../../types/wasteReport";
 
 import {
   LineChart,
@@ -20,10 +22,18 @@ interface CreateSegregationPayload {
   wet_kg: number;
   reject_kg: number;
   notes?: string;
+  waste_report_id?: number;
 }
 
 export default function WorkerSegregationPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const fromReportHouseholdId = searchParams.get("householdId");
+  const fromReportCode = searchParams.get("reportCode");
+  const fromReportId = searchParams.get("reportId");
 
   // Restrict page to waste workers
   if (user && user.role !== "WASTE_WORKER") {
@@ -54,18 +64,29 @@ export default function WorkerSegregationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Reports for dropdown
+  const [myReports, setMyReports] = useState<WasteReport[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState<string | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<string>(
+    () => fromReportId || ""
+  );
+
   const [date, setDate] = useState(() => {
     const t = new Date();
     return t.toISOString().slice(0, 10);
   });
 
-  const [householdId, setHouseholdId] = useState("");
+  const [householdId, setHouseholdId] = useState<string>(
+    () => fromReportHouseholdId || ""
+  );
   const [dryKg, setDryKg] = useState("");
   const [wetKg, setWetKg] = useState("");
   const [rejectKg, setRejectKg] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Load worker logs
   useEffect(() => {
     async function loadLogs() {
       try {
@@ -81,6 +102,80 @@ export default function WorkerSegregationPage() {
 
     loadLogs();
   }, []);
+
+  // Load assigned reports for dropdown
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        const res = await api.get<WasteReport[]>("/waste/reports/assigned/me");
+        const activeReports = res.data.filter(
+          (r) => r.status !== "RESOLVED"
+        );
+        setMyReports(activeReports);
+
+        // If we came from a job card with ?reportId=, ensure it's selected
+        if (fromReportId) {
+          const idNum = Number(fromReportId);
+          if (!Number.isNaN(idNum)) {
+            const exists = activeReports.some((r) => r.id === idNum);
+            if (exists) {
+              setSelectedReportId(fromReportId);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        setReportsError("Failed to load your assigned reports for linking.");
+      } finally {
+        setReportsLoading(false);
+      }
+    }
+
+    loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedReport = useMemo(
+    () =>
+      selectedReportId
+        ? myReports.find((r) => r.id === Number(selectedReportId)) ?? null
+        : null,
+    [myReports, selectedReportId]
+  );
+
+  // If the URL already has a householdId (coming from a job card),
+  // make sure the input is in sync.
+  useEffect(() => {
+    if (fromReportHouseholdId) {
+      setHouseholdId(fromReportHouseholdId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromReportHouseholdId]);
+
+  // When the selected report changes (either from dropdown or deep-link),
+  // auto-fill the Site / Household ID from that report.
+  useEffect(() => {
+    if (selectedReport && selectedReport.household_id) {
+      setHouseholdId(String(selectedReport.household_id));
+    }
+  }, [selectedReport]);
+
+  // Dropdown change handler: update selected report and immediately
+  // auto-fill the household/site ID.
+  function handleReportChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value;
+    setSelectedReportId(value);
+
+    if (!value) {
+      // If the worker clears the selection, don't override the existing Site ID
+      return;
+    }
+
+    const report = myReports.find((r) => r.id === Number(value));
+    if (report?.household_id) {
+      setHouseholdId(String(report.household_id));
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -98,6 +193,7 @@ export default function WorkerSegregationPage() {
       wet_kg: Number(wetKg || 0),
       reject_kg: Number(rejectKg || 0),
       notes: notes.trim() || undefined,
+      waste_report_id: selectedReport ? selectedReport.id : undefined,
     };
 
     try {
@@ -109,6 +205,11 @@ export default function WorkerSegregationPage() {
       setWetKg("");
       setRejectKg("");
       setNotes("");
+
+      // If we came here from a specific report/job card, go back after save
+      if (fromReportId) {
+        navigate(-1);
+      }
     } catch (err) {
       console.error(err);
       setError("Could not save segregation log. Please try again.");
@@ -166,9 +267,41 @@ export default function WorkerSegregationPage() {
           </div>
         </div>
 
+        {/* Context banner if coming from a report */}
+        {fromReportCode && (
+          <div className="max-w-6xl mx-auto -mt-2">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-2.5 text-xs text-emerald-900 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="font-semibold">
+                  Logging segregation for report:
+                </span>{" "}
+                <span className="font-mono text-emerald-700">
+                  {fromReportCode}
+                </span>
+                {fromReportHouseholdId && (
+                  <>
+                    {" "}
+                    · Site ID{" "}
+                    <span className="font-mono">{fromReportHouseholdId}</span>
+                  </>
+                )}
+              </div>
+              {fromReportId && (
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="underline decoration-emerald-400 decoration-2 underline-offset-2 text-[11px]"
+                >
+                  Back to report
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-4">
+          <div className="rounded-2xl border border-emerald-100/80 bg-white/80 shadow-md shadow-emerald-100/70 backdrop-blur-sm p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
               Total logs
             </p>
@@ -180,7 +313,7 @@ export default function WorkerSegregationPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white shadow-sm p-4">
+          <div className="rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50 to-white shadow-md shadow-emerald-100/70 backdrop-blur-sm p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
               Avg segregation score
             </p>
@@ -192,7 +325,7 @@ export default function WorkerSegregationPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-4">
+          <div className="rounded-2xl border border-emerald-100/80 bg-white/80 shadow-md shadow-emerald-100/70 backdrop-blur-sm p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
               Unique sites covered
             </p>
@@ -219,6 +352,40 @@ export default function WorkerSegregationPage() {
               <p className="text-[11px] text-slate-500">
                 All weights are in kilograms (kg)
               </p>
+            </div>
+
+            {/* Report dropdown */}
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-700">
+                Link to a report (optional)
+              </label>
+              <select
+                value={selectedReportId}
+                onChange={handleReportChange}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+              >
+                <option value="">
+                  No specific report &mdash; just log by Site ID
+                </option>
+                {myReports.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.public_id ?? `Report #${r.id}`} ·{" "}
+                    {r.status.replace("_", " ")}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-500">
+                Selecting a report will auto-fill the Site ID (if linked) and
+                connect this log to that complaint.
+              </p>
+              {reportsLoading && (
+                <p className="text-[11px] text-slate-500">
+                  Loading your assigned reports…
+                </p>
+              )}
+              {reportsError && (
+                <p className="text-[11px] text-red-500">{reportsError}</p>
+              )}
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">

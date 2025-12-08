@@ -10,7 +10,9 @@ interface Stats {
   availableOpen: number;
 }
 
-function statusCounts(reports: WasteReport[]): Record<WasteReportStatus, number> {
+function statusCounts(
+  reports: WasteReport[]
+): Record<WasteReportStatus, number> {
   const counts: Record<WasteReportStatus, number> = {
     OPEN: 0,
     IN_PROGRESS: 0,
@@ -86,8 +88,8 @@ export function WorkerDashboardPage() {
           Waste Worker Dashboard
         </h1>
         <p className="text-sm text-slate-600">
-          View reports assigned to you and see how many new jobs are waiting in
-          the city.
+          Track your report workload, see what&apos;s completed, and find new
+          jobs to claim in the city.
         </p>
       </header>
 
@@ -156,25 +158,26 @@ export function WorkerDashboardPage() {
           "
         >
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-700">
-            Completed
+            Completed reports
           </p>
           <p className="mt-1 text-2xl font-bold text-emerald-900">
             {stats.resolved}
           </p>
           <p className="mt-1 text-[0.7rem] text-slate-600">
-            Closed with proof photos and confirmation.
+            Closed with proof and confirmation.
           </p>
         </div>
       </section>
 
-      {/* AVAILABLE REPORTS CTA */}
+      {/* AVAILABLE + COMPLETED “SIDEBAR” SUMMARY */}
       <section
         className="
           relative z-10 rounded-3xl border border-emerald-100/80
           bg-white/80 px-5 py-4 shadow-md shadow-emerald-100/70
-          backdrop-blur-sm flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between
+          backdrop-blur-sm flex flex-col gap-3 md:flex-row md:items-center md:justify-between
         "
       >
+        {/* Left: open queue */}
         <div>
           <p className="text-sm text-slate-700">
             There are{" "}
@@ -188,7 +191,9 @@ export function WorkerDashboardPage() {
             pick the nearest job on your route.
           </p>
         </div>
-        <div className="mt-2 sm:mt-0">
+
+        {/* Right: compact chips – acts like a mini sidebar summary */}
+        <div className="flex flex-wrap gap-2 justify-start md:justify-end">
           <span
             className="
               inline-flex items-center rounded-full border border-emerald-500/70
@@ -197,6 +202,16 @@ export function WorkerDashboardPage() {
             "
           >
             🧹 Open queue · claim a job
+          </span>
+
+          <span
+            className="
+              inline-flex items-center rounded-full border border-emerald-200/80
+              bg-emerald-50/70 px-4 py-1.5 text-[0.75rem] font-semibold
+              text-emerald-900
+            "
+          >
+            ✅ Completed reports: {stats.resolved}
           </span>
         </div>
       </section>

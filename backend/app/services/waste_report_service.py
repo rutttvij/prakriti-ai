@@ -57,7 +57,16 @@ def create_waste_report(
     classification_label: Optional[str] = None,
     classification_confidence: Optional[float] = None,
     classification_recyclable: Optional[bool] = None,
+    # ⭐ NEW: link this report to a household / site if known
+    household_id: Optional[int] = None,
 ) -> WasteReport:
+    """
+    Create a new waste report, assign a per-user public_id, and
+    (optionally) link it to a household/site.
+
+    This is what the /waste/reports endpoint calls after
+    running the ML classification.
+    """
     reporter = db.query(User).filter(User.id == reporter_id).first()
     if reporter is None:
         raise ValueError("Reporter user not found")
@@ -77,6 +86,7 @@ def create_waste_report(
         status=WasteReportStatus.OPEN.value,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
+        household_id=household_id,  # ⭐ store the link here
     )
     db.add(report)
     db.commit()
@@ -89,7 +99,7 @@ def create_waste_report(
 
 
 def _handle_reporting_badges_on_create(db: Session, reporter_id: int) -> None:
-    from app.models.badge import UserBadge, Badge
+    from app.models.badge import UserBadge, Badge  # noqa: F401  (import used indirectly)
 
     # simple: if user has at least 1 report, award "Active Reporter"
     count = db.query(WasteReport).filter(WasteReport.reporter_id == reporter_id).count()
@@ -119,6 +129,13 @@ def update_report_status(
     new_status: WasteReportStatus,
     assigned_worker_id: Optional[int] = None,
 ) -> WasteReport:
+    """
+    Update status (and optionally assignment) of a waste report.
+
+    - Called by super admin status endpoint
+    - Also reused by worker status endpoint so RESOLVED can
+      trigger rewards + carbon accounting.
+    """
     report = db.query(WasteReport).filter(WasteReport.id == report_id).first()
     if report is None:
         raise ValueError("Report not found")

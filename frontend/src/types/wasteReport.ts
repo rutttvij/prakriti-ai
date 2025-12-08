@@ -12,6 +12,9 @@ export interface WasteReport {
   latitude?: number | null;
   longitude?: number | null;
 
+  // Link to a household / site, if known
+  household_id?: number | null;
+
   // AI classification snapshot saved with the report
   classification_label?: string | null;
   classification_confidence?: number | null;

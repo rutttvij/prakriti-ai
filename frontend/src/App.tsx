@@ -13,6 +13,7 @@ import CitizenTrainingPage from "./pages/citizen/CitizenTrainingPage";
 import CitizenWasteReportPage from "./pages/citizen/CitizenWasteReportPage";
 import CitizenMyReportsPage from "./pages/citizen/CitizenMyReportsPage";
 import CitizenHouseholdPage from "./pages/citizen/CitizenHouseholdPage";
+import CitizenInsightsPage from "./pages/citizen/CitizenInsightsPage";
 
 /* Admin Pages */
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
@@ -108,6 +109,18 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/insights"
+            element={
+              <ProtectedRoute>
+                <CitizenLayout>
+                  <CitizenInsightsPage />
+                </CitizenLayout>
+              </ProtectedRoute>
+            }
+           />
+
 
           {/* ---------- WASTE WORKER ROUTES ---------- */}
           <Route

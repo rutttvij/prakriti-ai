@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
 import { BACKEND_ORIGIN } from "../../lib/config";
@@ -24,6 +25,8 @@ export function WorkerAvailableReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<number | null>(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function load() {
@@ -61,6 +64,24 @@ export function WorkerAvailableReportsPage() {
     }
   }
 
+  // Navigate to segregation dashboard with context from this report
+  function handleLogSegregation(report: WasteReport) {
+    if (!report.household_id) {
+      setError("This report is not linked to a household yet.");
+      return;
+    }
+
+    const code = report.public_id
+      ? report.public_id
+      : `CIT-${report.id.toString().padStart(3, "0")}`;
+
+    navigate(
+      `/worker/segregation?householdId=${report.household_id}` +
+        `&reportCode=${encodeURIComponent(code)}` +
+        `&reportId=${report.id}`
+    );
+  }
+
   /* -------------------------------
      Loading State
   -------------------------------- */
@@ -70,7 +91,6 @@ export function WorkerAvailableReportsPage() {
         Loading available reports…
       </div>
     );
-    ``;
   }
 
   return (
@@ -180,8 +200,8 @@ export function WorkerAvailableReportsPage() {
                 </div>
               )}
 
-              {/* Right section: claim button */}
-              <div className="flex justify-start md:justify-end md:w-40">
+              {/* Right section: actions */}
+              <div className="flex flex-col items-stretch md:items-end md:w-44 gap-2">
                 <button
                   onClick={() => handleClaim(r.id)}
                   disabled={claimingId === r.id}
@@ -193,6 +213,21 @@ export function WorkerAvailableReportsPage() {
                 >
                   {claimingId === r.id ? "Claiming…" : "Accept Job"}
                 </button>
+
+                {/* Log segregation shortcut – only if linked to a household/site */}
+                {r.household_id && (
+                  <button
+                    type="button"
+                    onClick={() => handleLogSegregation(r)}
+                    className="
+                      rounded-full border border-emerald-100 bg-emerald-50/70 px-5 py-2
+                      text-xs font-medium text-emerald-800 hover:bg-emerald-100
+                      transition
+                    "
+                  >
+                    Log segregation for this site
+                  </button>
+                )}
               </div>
             </div>
           );

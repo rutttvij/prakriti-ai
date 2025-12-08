@@ -32,6 +32,9 @@ class WasteReport(Base):
 
     reporter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
+    # 🔹 Link to household / site (optional but preferred)
+    household_id = Column(Integer, ForeignKey("households.id"), nullable=True)
+
     image_path = Column(String, nullable=True)  # local file path
     description = Column(String, nullable=True)
 
@@ -50,9 +53,23 @@ class WasteReport(Base):
     assigned_worker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     resolved_at = Column(DateTime, nullable=True)
 
-    reporter = relationship(User, foreign_keys=[reporter_id], backref="reports_made")
+    # Relationships
+    segregation_logs = relationship("SegregationLog", back_populates="waste_report")
+
+    reporter = relationship(
+        User,
+        foreign_keys=[reporter_id],
+        backref="reports_made",
+    )
+
     assigned_worker = relationship(
         User,
         foreign_keys=[assigned_worker_id],
         backref="reports_assigned",
+    )
+
+    # 🔹 Household / site associated with this report
+    household = relationship(
+        "Household",
+        backref="waste_reports",
     )

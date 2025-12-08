@@ -55,6 +55,10 @@ class SegregationLog(Base):
 
     # which worker recorded this log
     worker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    waste_report_id = Column(Integer, ForeignKey("waste_reports.id"), nullable=True)
+    
+    waste_report = relationship("WasteReport", back_populates="segregation_logs")
 
     # logical date of the log (not timestamp)
     log_date = Column(Date, nullable=False)

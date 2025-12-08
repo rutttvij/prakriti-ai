@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
 import { BACKEND_ORIGIN } from "../../lib/config";
@@ -21,6 +22,8 @@ export function WorkerMyReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function load() {
@@ -60,6 +63,24 @@ export function WorkerMyReportsPage() {
     } finally {
       setUpdatingId(null);
     }
+  }
+
+  // Navigate to segregation page with context so the worker can log for this site
+  function handleLogSegregation(report: WasteReport) {
+    if (!report.household_id) {
+      setError("This report is not linked to a household yet.");
+      return;
+    }
+
+    const code = report.public_id
+      ? report.public_id
+      : `CIT-${report.id.toString().padStart(3, "0")}`;
+
+    navigate(
+      `/worker/segregation?householdId=${report.household_id}` +
+        `&reportCode=${encodeURIComponent(code)}` +
+        `&reportId=${report.id}`
+    );
   }
 
   if (loading) {
@@ -180,7 +201,22 @@ export function WorkerMyReportsPage() {
               )}
 
               {/* BUTTONS */}
-              <div className="flex w-full flex-col items-stretch justify-center gap-2 md:w-44">
+              <div className="flex w-full flex-col items-stretch justify-center gap-2 md:w-56">
+                {/* Log segregation for this site (shortcut into segregation dashboard) */}
+                {r.household_id && (
+                  <button
+                    type="button"
+                    onClick={() => handleLogSegregation(r)}
+                    className="
+                      rounded-xl border border-emerald-100 bg-emerald-50/80 
+                      px-3 py-2 text-xs font-semibold text-emerald-800
+                      hover:bg-emerald-100 transition
+                    "
+                  >
+                    Log segregation for this site
+                  </button>
+                )}
+
                 {/* Mark In Progress */}
                 <button
                   type="button"

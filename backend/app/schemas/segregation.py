@@ -41,7 +41,9 @@ class SegregationLogCreate(BaseModel):
 class SegregationLogRead(BaseModel):
     id: int
     household_id: int
+
     worker_id: Optional[int] = None
+    citizen_id: Optional[int] = None
 
     log_date: date
     dry_kg: float

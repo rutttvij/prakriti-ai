@@ -58,14 +58,12 @@ def create_household(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # Decide if this one should be primary
     existing_primary = _get_existing_primary(db, current_user.id)
 
     make_primary = False
     if body.is_primary is True:
         make_primary = True
     elif existing_primary is None:
-        # First household for this user becomes primary by default
         make_primary = True
 
     household = Household(
@@ -94,13 +92,12 @@ def list_my_households(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    households = (
+    return (
         db.query(Household)
         .filter(Household.owner_user_id == current_user.id)
         .order_by(Household.is_primary.desc(), Household.created_at.asc())
         .all()
     )
-    return households
 
 
 @router.get("/households/primary", response_model=Optional[HouseholdRead])
@@ -108,8 +105,7 @@ def get_primary_household(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    household = _get_existing_primary(db, current_user.id)
-    return household
+    return _get_existing_primary(db, current_user.id)
 
 
 @router.post(
@@ -139,8 +135,7 @@ def make_household_primary(
             detail="Not allowed to modify this household",
         )
 
-    household = _set_primary_for_user(db, household.owner_user_id, household)
-    return household
+    return _set_primary_for_user(db, household.owner_user_id, household)
 
 
 @router.post("/households/link", response_model=HouseholdRead)
@@ -158,7 +153,6 @@ def link_existing_household(
     if household is None:
         raise HTTPException(status_code=404, detail="Household not found")
 
-    # If already owned by someone else, block
     if (
         household.owner_user_id is not None
         and household.owner_user_id != current_user.id
@@ -168,19 +162,16 @@ def link_existing_household(
             detail="This household is already linked to another user",
         )
 
-    # Link to current user
     household.owner_user_id = current_user.id
 
-    # If user has no primary yet, make this primary
     existing_primary = _get_existing_primary(db, current_user.id)
     if existing_primary is None:
         household.is_primary = True
         db.commit()
-        household = _set_primary_for_user(db, current_user.id, household)
-    else:
-        db.commit()
-        db.refresh(household)
+        return _set_primary_for_user(db, current_user.id, household)
 
+    db.commit()
+    db.refresh(household)
     return household
 
 
@@ -200,22 +191,17 @@ def update_household(
     if household is None:
         raise HTTPException(status_code=404, detail="Household not found")
 
-    # Only owner or super admin can edit
     if (
         household.owner_user_id != current_user.id
         and current_user.role != UserRole.SUPER_ADMIN
     ):
-        raise HTTPException(
-            status_code=403, detail="Not allowed to edit this household"
-        )
+        raise HTTPException(status_code=403, detail="Not allowed to edit this household")
 
     household.name = body.name
     household.address = body.address
     household.ward = body.ward
     household.city = body.city
     household.pincode = body.pincode
-    # keep is_bulk_generator as-is for now or guard it:
-    # household.is_bulk_generator = body.is_bulk_generator
 
     db.commit()
     db.refresh(household)
@@ -233,13 +219,11 @@ def create_segregation_log(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # Optional: only waste workers can record logs
     if current_user.role != UserRole.WASTE_WORKER:
         raise HTTPException(
             status_code=403, detail="Only waste workers can record logs"
         )
 
-    # ensure household exists
     household = (
         db.query(Household).filter(Household.id == body.household_id).first()
     )
@@ -255,6 +239,7 @@ def create_segregation_log(
         wet_kg=body.wet_kg,
         reject_kg=body.reject_kg,
         notes=body.notes,
+        waste_report_id=body.waste_report_id,
     )
 
     return log
@@ -270,8 +255,7 @@ def list_my_segregation_logs(
             status_code=403, detail="Only waste workers can view this"
         )
 
-    logs = list_logs_for_worker(db, worker_id=current_user.id)
-    return logs
+    return list_logs_for_worker(db, worker_id=current_user.id)
 
 
 @router.get(
@@ -283,23 +267,21 @@ def list_logs_for_household(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # basic ownership check
     household = (
         db.query(Household).filter(Household.id == household_id).first()
     )
     if household is None:
         raise HTTPException(status_code=404, detail="Household not found")
+
     if (
         household.owner_user_id != current_user.id
         and current_user.role != UserRole.SUPER_ADMIN
     ):
-        # Super Admin can bypass ownership
         raise HTTPException(status_code=403, detail="Not your household")
 
-    logs = (
+    return (
         db.query(SegregationLog)
         .filter(SegregationLog.household_id == household_id)
         .order_by(SegregationLog.log_date.desc())
         .all()
     )
-    return logs

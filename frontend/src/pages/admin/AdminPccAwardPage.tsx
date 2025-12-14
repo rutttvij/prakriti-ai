@@ -1,5 +1,4 @@
 // src/pages/admin/AdminPccAwardPage.tsx
-
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -41,9 +40,7 @@ export const AdminPccAwardPage: React.FC = () => {
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [logIdParam]);
 
-  const [mode, setMode] = useState<"MANUAL" | "SEGREGATION">(
-    logId ? "SEGREGATION" : "MANUAL",
-  );
+  const isSegregationMode = !!logId;
 
   const [segLog, setSegLog] = useState<SegregationLogDetail | null>(null);
   const [segLoading, setSegLoading] = useState(false);
@@ -58,14 +55,10 @@ export const AdminPccAwardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (logId) setMode("SEGREGATION");
-  }, [logId]);
-
-  useEffect(() => {
     const token = getAuthToken();
     if (!token) return;
 
-    if (!logId || mode !== "SEGREGATION") {
+    if (!logId) {
       setSegLog(null);
       setSegError(null);
       setSegLoading(false);
@@ -95,9 +88,7 @@ export const AdminPccAwardPage: React.FC = () => {
 
         setUserId(String(data.citizen.id));
         setTokens(data.recommended_pcc ? String(data.recommended_pcc) : "");
-        setReason(
-          `Segregation reward · Log #${data.id} · Score ${data.score}`,
-        );
+        setReason(`Segregation reward · Log #${data.id} · Score ${data.score}`);
       } catch (e: any) {
         setSegError(e?.message || "Error loading segregation log.");
       } finally {
@@ -106,7 +97,17 @@ export const AdminPccAwardPage: React.FC = () => {
     };
 
     fetchLog();
-  }, [logId, mode]);
+  }, [logId]);
+
+  useEffect(() => {
+    setError(null);
+    setSuccess(null);
+    if (!logId) {
+      setSegLog(null);
+      setSegError(null);
+      setSegLoading(false);
+    }
+  }, [logId]);
 
   const submitManual = async (e: FormEvent) => {
     e.preventDefault();
@@ -212,7 +213,10 @@ export const AdminPccAwardPage: React.FC = () => {
         throw new Error(data?.detail || "Failed to award PCC for log.");
       }
 
-      const data = (await res.json()) as { awarded_pcc: number; new_balance: number };
+      const data = (await res.json()) as {
+        awarded_pcc: number;
+        new_balance: number;
+      };
 
       setSuccess(
         `Awarded ${data.awarded_pcc.toFixed(1)} PCC for segregation log #${logId}. Citizen new balance: ${data.new_balance.toFixed(1)}.`,
@@ -233,7 +237,7 @@ export const AdminPccAwardPage: React.FC = () => {
     }
   };
 
-  const activeSubmit = mode === "SEGREGATION" ? submitSegregationAward : submitManual;
+  const activeSubmit = isSegregationMode ? submitSegregationAward : submitManual;
 
   return (
     <div className="relative">
@@ -253,49 +257,9 @@ export const AdminPccAwardPage: React.FC = () => {
               Award PCC either manually or against a segregation log.
             </p>
           </div>
-
-          <div className="mt-1 rounded-2xl border border-emerald-100/80 bg-white/80 px-3 py-2 text-[0.7rem] text-slate-600 shadow-sm shadow-emerald-100/80 backdrop-blur-sm max-w-xs">
-            <p className="font-semibold text-slate-900 mb-1">Mode</p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMode("MANUAL")}
-                className={[
-                  "rounded-full px-3 py-1 text-[0.7rem] font-semibold transition",
-                  mode === "MANUAL"
-                    ? "bg-emerald-700 text-white"
-                    : "bg-white/70 text-slate-700 hover:bg-white",
-                ].join(" ")}
-              >
-                Manual
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("SEGREGATION")}
-                disabled={!logId}
-                className={[
-                  "rounded-full px-3 py-1 text-[0.7rem] font-semibold transition",
-                  !logId
-                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                    : mode === "SEGREGATION"
-                      ? "bg-emerald-700 text-white"
-                      : "bg-white/70 text-slate-700 hover:bg-white",
-                ].join(" ")}
-                title={!logId ? "Open with ?logId=123 to enable" : undefined}
-              >
-                Segregation log
-              </button>
-            </div>
-            {!logId && (
-              <p className="mt-2 text-[0.65rem] text-slate-500">
-                To award via segregation log: open this page {" "}
-                <span className="font-mono">from dashboard</span>.
-              </p>
-            )}
-          </div>
         </header>
 
-        {mode === "SEGREGATION" && (
+        {isSegregationMode && (
           <section
             className="
               max-w-3xl
@@ -317,15 +281,9 @@ export const AdminPccAwardPage: React.FC = () => {
                 </p>
               </div>
               <div className="text-[0.7rem] text-slate-600">
-                {logId ? (
-                  <span className="rounded-full border border-emerald-100 bg-white/80 px-3 py-1">
-                    Log #{logId}
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-red-100 bg-red-50/80 px-3 py-1 text-red-700">
-                    Missing logId
-                  </span>
-                )}
+                <span className="rounded-full border border-emerald-100 bg-white/80 px-3 py-1">
+                  Log #{logId}
+                </span>
               </div>
             </div>
 
@@ -372,13 +330,14 @@ export const AdminPccAwardPage: React.FC = () => {
                     #{segLog.household_id}
                   </div>
                   <div className="mt-1 text-[0.65rem] text-slate-500">
-                    Log date:{" "}
-                    {new Date(segLog.log_date).toLocaleDateString()}
+                    Log date: {new Date(segLog.log_date).toLocaleDateString()}
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
-                  <div className="text-[0.65rem] text-slate-500">Award status</div>
+                  <div className="text-[0.65rem] text-slate-500">
+                    Award status
+                  </div>
                   <div className="mt-1 font-semibold">
                     {segLog.pcc_awarded ? (
                       <span className="text-emerald-700">Already awarded</span>
@@ -424,10 +383,10 @@ export const AdminPccAwardPage: React.FC = () => {
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   placeholder="e.g. 42"
-                  disabled={mode === "SEGREGATION"}
+                  disabled={isSegregationMode}
                 />
                 <p className="mt-1 text-[0.65rem] text-slate-500">
-                  {mode === "SEGREGATION"
+                  {isSegregationMode
                     ? "Auto-filled from segregation log."
                     : "Find this in the Users & approvals list."}
                 </p>
@@ -505,7 +464,7 @@ export const AdminPccAwardPage: React.FC = () => {
                 type="submit"
                 disabled={
                   loading ||
-                  (mode === "SEGREGATION" &&
+                  (isSegregationMode &&
                     (!!segLog?.pcc_awarded || !logId || segLoading))
                 }
                 className="
@@ -519,13 +478,13 @@ export const AdminPccAwardPage: React.FC = () => {
               >
                 {loading
                   ? "Awarding…"
-                  : mode === "SEGREGATION"
+                  : isSegregationMode
                     ? "Award PCC for segregation log"
                     : "Award PCC tokens"}
               </button>
 
               <p className="text-[0.7rem] text-slate-500">
-                {mode === "SEGREGATION"
+                {isSegregationMode
                   ? "Awards are locked to one award per log."
                   : "Manual awards are logged in the carbon ledger."}
               </p>

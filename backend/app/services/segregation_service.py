@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta
 from typing import Optional, List
 
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 
 from app.models.household import Household, SegregationLog
 from app.models.badge import BadgeCategory
@@ -44,12 +45,25 @@ def log_segregation(
     wet_kg: float,
     reject_kg: float,
     notes: Optional[str] = None,
+    waste_report_id: Optional[int] = None,
 ) -> SegregationLog:
     score = calculate_segregation_score(
         dry_kg=dry_kg,
         wet_kg=wet_kg,
         reject_kg=reject_kg,
     )
+
+    citizen_id: Optional[int] = None
+    if waste_report_id is not None:
+        from app.models.waste_report import WasteReport
+
+        report = db.query(WasteReport).filter(WasteReport.id == waste_report_id).first()
+        if report is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Waste report not found",
+            )
+        citizen_id = report.reporter_id
 
     log = SegregationLog(
         household_id=household_id,
@@ -60,6 +74,8 @@ def log_segregation(
         reject_kg=reject_kg,
         segregation_score=score,
         notes=notes,
+        waste_report_id=waste_report_id,
+        citizen_id=citizen_id,
     )
     db.add(log)
     db.commit()

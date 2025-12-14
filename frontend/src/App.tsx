@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
 /* Public Pages */
 import { LandingPage } from "./pages/LandingPage";
@@ -39,13 +39,18 @@ import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { BackToTopButton } from "./components/BackToTopButton";
 
+const AdminPccParamRedirect: React.FC = () => {
+  const { logId } = useParams();
+  const n = logId ? parseInt(logId, 10) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return <Navigate to="/admin/pcc" replace />;
+  return <Navigate to={`/admin/pcc?logId=${n}`} replace />;
+};
+
 function App() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-emerald-50/70 to-white">
-      {/* Global navbar */}
       <Navbar />
 
-      {/* Main content area — grows to push footer down */}
       <main className="flex-1">
         <Routes>
           {/* ---------- PUBLIC ROUTES ---------- */}
@@ -167,7 +172,6 @@ function App() {
             }
           />
 
-          {/* ⭐ NEW: WORKER ROUTE MAP */}
           <Route
             path="/worker/route-map"
             element={
@@ -191,6 +195,8 @@ function App() {
             }
           />
 
+          <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
+
           <Route
             path="/admin/users"
             element={
@@ -202,6 +208,7 @@ function App() {
             }
           />
 
+          {/* Canonical PCC route (query: ?logId=123) */}
           <Route
             path="/admin/pcc"
             element={
@@ -212,6 +219,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Alias routes to prevent bad navigation causing fallback-to-landing */}
+          <Route path="/admin/pcc-award" element={<Navigate to="/admin/pcc" replace />} />
+          <Route path="/admin/pcc/:logId" element={<AdminPccParamRedirect />} />
 
           <Route
             path="/admin/contact"
@@ -229,7 +240,6 @@ function App() {
         </Routes>
       </main>
 
-      {/* Global footer + back-to-top */}
       <Footer />
       <BackToTopButton />
     </div>

@@ -1,5 +1,6 @@
 // src/pages/admin/AdminDashboardPage.tsx
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -22,7 +23,7 @@ interface AdminSummary {
 }
 
 interface CarbonDailyPoint {
-  date: string; // ISO date
+  date: string;
   carbon_kg: number;
   pcc_tokens: number;
 }
@@ -35,11 +36,25 @@ interface CarbonSummary {
   daily: CarbonDailyPoint[];
 }
 
+interface SegregationLogPreview {
+  id: string;
+  waste_report_id?: string | null;
+  household_id?: string | null;
+  citizen_name?: string | null;
+  score: number;
+  pcc_awarded?: boolean | null;
+  created_at?: string | null;
+}
+
 export const AdminDashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<AdminSummary | null>(null);
   const [carbon, setCarbon] = useState<CarbonSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [recentLogs, setRecentLogs] = useState<SegregationLogPreview[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -49,9 +64,7 @@ export const AdminDashboardPage: React.FC = () => {
       return;
     }
 
-    const headers = {
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = { Authorization: `Bearer ${token}` };
 
     const fetchData = async () => {
       try {
@@ -60,12 +73,8 @@ export const AdminDashboardPage: React.FC = () => {
           fetch(`${API_BASE_URL}/api/v1/admin/analytics/carbon`, { headers }),
         ]);
 
-        if (!summaryRes.ok) {
-          throw new Error("Failed to load admin summary");
-        }
-        if (!carbonRes.ok) {
-          throw new Error("Failed to load carbon analytics");
-        }
+        if (!summaryRes.ok) throw new Error("Failed to load admin summary");
+        if (!carbonRes.ok) throw new Error("Failed to load carbon analytics");
 
         const summaryData = (await summaryRes.json()) as AdminSummary;
         const carbonData = (await carbonRes.json()) as CarbonSummary;
@@ -80,22 +89,50 @@ export const AdminDashboardPage: React.FC = () => {
       }
     };
 
+    const fetchRecentLogs = async () => {
+      setLogsLoading(true);
+      setLogsError(null);
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/v1/admin/segregation/logs?limit=5`,
+          { headers },
+        );
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(
+            text?.trim()
+              ? `Failed to load segregation logs: ${text}`
+              : "Failed to load segregation logs",
+          );
+        }
+        const data = (await res.json()) as SegregationLogPreview[];
+        setRecentLogs(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        console.error(err);
+        setLogsError(err.message ?? "Error loading segregation logs.");
+        setRecentLogs([]);
+      } finally {
+        setLogsLoading(false);
+      }
+    };
+
     fetchData();
+    fetchRecentLogs();
   }, []);
 
   const renderCarbonChart = () => {
     if (!carbon || carbon.daily.length === 0) {
       return (
         <p className="mt-4 text-xs text-slate-500">
-          No carbon data yet. Start logging segregation and reports to see
-          trends here.
+          No carbon data yet. Start logging segregation and reports to see trends
+          here.
         </p>
       );
     }
 
     const maxValue = Math.max(
       ...carbon.daily.map((d) => Math.max(d.carbon_kg, d.pcc_tokens)),
-      1
+      1,
     );
 
     return (
@@ -115,20 +152,14 @@ export const AdminDashboardPage: React.FC = () => {
           {carbon.daily.map((point) => (
             <div key={point.date} className="flex flex-col items-center">
               <div className="flex h-24 items-end gap-0.5">
-                {/* Carbon bar */}
                 <div
                   className="w-2 rounded-t-full bg-gradient-to-t from-emerald-600 to-emerald-400"
-                  style={{
-                    height: `${(point.carbon_kg / maxValue) * 100}%`,
-                  }}
+                  style={{ height: `${(point.carbon_kg / maxValue) * 100}%` }}
                   title={`${point.carbon_kg.toFixed(1)} kg CO₂e`}
                 />
-                {/* PCC bar */}
                 <div
                   className="w-2 rounded-t-full bg-gradient-to-t from-emerald-300 to-emerald-200"
-                  style={{
-                    height: `${(point.pcc_tokens / maxValue) * 100}%`,
-                  }}
+                  style={{ height: `${(point.pcc_tokens / maxValue) * 100}%` }}
                   title={`${point.pcc_tokens.toFixed(1)} PCC`}
                 />
               </div>
@@ -158,7 +189,12 @@ export const AdminDashboardPage: React.FC = () => {
   const renderCarbonBreakdown = () => {
     if (!carbon) return null;
 
-    const rolesOrder = ["CITIZEN", "WASTE_WORKER", "BULK_GENERATOR", "SUPER_ADMIN"];
+    const rolesOrder = [
+      "CITIZEN",
+      "WASTE_WORKER",
+      "BULK_GENERATOR",
+      "SUPER_ADMIN",
+    ];
 
     return (
       <div className="mt-4 grid gap-3 text-[0.7rem] text-slate-600 md:grid-cols-2">
@@ -170,9 +206,7 @@ export const AdminDashboardPage: React.FC = () => {
             backdrop-blur-sm
           "
         >
-          <h3 className="text-xs font-semibold text-slate-900 mb-2">
-            By role
-          </h3>
+          <h3 className="mb-2 text-xs font-semibold text-slate-900">By role</h3>
           <div className="space-y-1.5">
             {rolesOrder.map((roleKey) => {
               const row = carbon.by_role[roleKey];
@@ -199,28 +233,130 @@ export const AdminDashboardPage: React.FC = () => {
             backdrop-blur-sm
           "
         >
-          <h3 className="text-xs font-semibold text-slate-900 mb-2">
+          <h3 className="mb-2 text-xs font-semibold text-slate-900">
             By activity type
           </h3>
           <div className="space-y-1.5">
-            {Object.entries(carbon.by_activity_type).map(
-              ([activity, row]) => (
-                <div
-                  key={activity}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-[0.65rem] capitalize text-slate-500">
-                    {activity.replace("_", " ").toLowerCase()}
-                  </span>
-                  <span className="text-[0.65rem] text-slate-700">
-                    {row.carbon_kg.toFixed(1)} kg ·{" "}
-                    {row.pcc_tokens.toFixed(1)} PCC
-                  </span>
-                </div>
-              )
-            )}
+            {Object.entries(carbon.by_activity_type).map(([activity, row]) => (
+              <div key={activity} className="flex items-center justify-between">
+                <span className="text-[0.65rem] capitalize text-slate-500">
+                  {activity.replace("_", " ").toLowerCase()}
+                </span>
+                <span className="text-[0.65rem] text-slate-700">
+                  {row.carbon_kg.toFixed(1)} kg · {row.pcc_tokens.toFixed(1)} PCC
+                </span>
+              </div>
+            ))}
           </div>
         </div>
+      </div>
+    );
+  };
+
+  const renderRecentSegregationLogs = () => {
+    if (logsLoading) {
+      return <div className="mt-3 text-xs text-slate-600">Loading logs…</div>;
+    }
+
+    return (
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Recent segregation logs
+            </h2>
+            <p className="mt-1 text-[0.7rem] text-slate-500">
+              Review scores and award PCC to citizens.
+            </p>
+          </div>
+
+          <Link
+            to="/admin/pcc"
+            className="
+              rounded-full border border-emerald-100/80 bg-white/70
+              px-3 py-1.5 text-[0.7rem] font-semibold text-emerald-800
+              shadow-sm shadow-emerald-100/70 backdrop-blur-sm
+              hover:bg-white
+            "
+          >
+            View all
+          </Link>
+        </div>
+
+        {logsError ? (
+          <div
+            className="
+              mt-3 rounded-2xl border border-amber-100/80 bg-amber-50/80
+              px-4 py-3 text-[0.7rem] text-amber-800
+              shadow-sm shadow-amber-100/70
+            "
+          >
+            {logsError}
+          </div>
+        ) : recentLogs.length === 0 ? (
+          <p className="mt-3 text-xs text-slate-500">
+            No segregation logs found yet.
+          </p>
+        ) : (
+          <div className="mt-3 overflow-x-auto rounded-2xl border border-slate-100 bg-white/60">
+            <table className="w-full text-left text-[0.75rem] text-slate-700">
+              <thead className="bg-slate-50/70 text-[0.7rem] text-slate-500">
+                <tr>
+                  <th className="px-4 py-2.5">Citizen</th>
+                  <th className="px-4 py-2.5">Household</th>
+                  <th className="px-4 py-2.5">Report</th>
+                  <th className="px-4 py-2.5 text-right">Score</th>
+                  <th className="px-4 py-2.5 text-center">PCC</th>
+                  <th className="px-4 py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentLogs.map((log) => {
+                  const awarded = Boolean(log.pcc_awarded);
+                  return (
+                    <tr key={log.id} className="border-t border-slate-100">
+                      <td className="px-4 py-2.5">{log.citizen_name ?? "—"}</td>
+                      <td className="px-4 py-2.5">{log.household_id ?? "—"}</td>
+                      <td className="px-4 py-2.5">{log.waste_report_id ?? "—"}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-slate-900">
+                        {Number.isFinite(log.score) ? log.score.toFixed(1) : "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        {awarded ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-semibold text-emerald-700">
+                            Awarded
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600">
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        {awarded ? (
+                          <span className="text-[0.7rem] text-slate-500">—</span>
+                        ) : (
+                          <Link
+                            to={`/admin/pcc?logId=${encodeURIComponent(log.id)}`}
+                            className="
+                              inline-flex items-center justify-center
+                              rounded-full bg-emerald-600 px-3 py-1.5
+                              text-[0.7rem] font-semibold text-white
+                              shadow-sm shadow-emerald-200
+                              hover:bg-emerald-700
+                            "
+                          >
+                            Award PCC
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   };
@@ -257,11 +393,9 @@ export const AdminDashboardPage: React.FC = () => {
 
   return (
     <div className="relative">
-      {/* Soft glow behind header */}
       <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
 
       <div className="relative space-y-6">
-        {/* Header */}
         <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/70 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
@@ -272,13 +406,11 @@ export const AdminDashboardPage: React.FC = () => {
               City Dashboard
             </h1>
             <p className="mt-1 text-xs text-slate-600">
-              Overview of users, operations, and carbon impact across
-              Prakriti.AI.
+              Overview of users, operations, and carbon impact across Prakriti.AI.
             </p>
           </div>
         </header>
 
-        {/* KPI cards */}
         <section className="grid gap-4 md:grid-cols-4">
           <div
             className="
@@ -296,8 +428,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
             <div className="mt-2 text-[0.65rem] text-slate-500">
               Citizens: {summary.total_citizens} · Workers:{" "}
-              {summary.total_waste_workers} · Bulk:{" "}
-              {summary.total_bulk_generators}
+              {summary.total_waste_workers} · Bulk: {summary.total_bulk_generators}
             </div>
           </div>
 
@@ -362,7 +493,6 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Carbon + PCC overview and trend */}
         <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <div
             className="
@@ -381,9 +511,7 @@ export const AdminDashboardPage: React.FC = () => {
 
             <div className="mt-4 space-y-3">
               <div>
-                <div className="text-[0.7rem] text-slate-500">
-                  Total carbon
-                </div>
+                <div className="text-[0.7rem] text-slate-500">Total carbon</div>
                 <div className="text-lg font-semibold text-emerald-700">
                   {summary.total_carbon_kg.toFixed(1)} kg CO₂e
                 </div>
@@ -415,6 +543,17 @@ export const AdminDashboardPage: React.FC = () => {
             </h2>
             {renderCarbonChart()}
           </div>
+        </section>
+
+        <section
+          className="
+            rounded-3xl border border-emerald-100/80
+            bg-white/80 p-4
+            shadow-md shadow-emerald-100/70
+            backdrop-blur-sm
+          "
+        >
+          {renderRecentSegregationLogs()}
         </section>
       </div>
     </div>

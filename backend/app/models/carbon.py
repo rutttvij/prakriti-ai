@@ -19,6 +19,7 @@ from app.core.database import Base
 
 class CarbonActivityType(str, enum.Enum):
     SEGREGATION = "SEGREGATION"
+    SEGREGATION_REWARD = "SEGREGATION_REWARD"
     WASTE_REPORT_RESOLUTION = "WASTE_REPORT_RESOLUTION"
     HOUSEHOLD_CLASSIFICATION = "HOUSEHOLD_CLASSIFICATION"
     MANUAL_AWARD = "MANUAL_AWARD"
@@ -36,13 +37,10 @@ class CarbonActivity(Base):
         nullable=False,
     )
 
-    # Positive = kg CO2e saved, negative = emitted
     carbon_kg = Column(Float, nullable=False)
 
-    # PCC tokens awarded for this activity
     pcc_tokens = Column(Float, nullable=False, default=0.0)
 
-    # Renamed from "metadata" (reserved) → "details"
     details = Column(JSONB, nullable=False, server_default="{}")
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

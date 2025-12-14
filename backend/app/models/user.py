@@ -25,17 +25,12 @@ class User(Base):
 
     role = Column(Enum(UserRole, name="userrole"), nullable=False, default=UserRole.CITIZEN)
 
-    # Approval / activation flag
     is_active = Column(Boolean, nullable=False, default=False)
 
-    # 12-digit government identifier, unique across all users
     government_id = Column(String(12), unique=True, nullable=True)
 
-    # 6-digit pincode
     pincode = Column(String(6), nullable=True)
 
-    # Flexible storage for role-specific data
     meta = Column(JSONB, nullable=False, server_default="{}")
 
-    # PCC token balance (total tokens available to the user)
     pcc_balance = Column(Float, nullable=False, default=0.0)

@@ -1,6 +1,7 @@
 // src/pages/admin/AdminPccAwardPage.tsx
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -19,15 +20,95 @@ interface AwardResponse {
   new_balance: number;
 }
 
+interface SegregationLogDetail {
+  id: number;
+  score: number;
+  pcc_awarded: boolean;
+  recommended_pcc: number;
+  created_at: string | null;
+  log_date: string;
+  household_id: number;
+  waste_report_id: number | null;
+  citizen: AwardResponseUser;
+}
+
 export const AdminPccAwardPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const logIdParam = searchParams.get("logId");
+  const logId = useMemo(() => {
+    if (!logIdParam) return null;
+    const n = parseInt(logIdParam, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [logIdParam]);
+
+  const [mode, setMode] = useState<"MANUAL" | "SEGREGATION">(
+    logId ? "SEGREGATION" : "MANUAL",
+  );
+
+  const [segLog, setSegLog] = useState<SegregationLogDetail | null>(null);
+  const [segLoading, setSegLoading] = useState(false);
+  const [segError, setSegError] = useState<string | null>(null);
+
   const [userId, setUserId] = useState("");
   const [tokens, setTokens] = useState("");
   const [reason, setReason] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: FormEvent) => {
+  useEffect(() => {
+    if (logId) setMode("SEGREGATION");
+  }, [logId]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    if (!logId || mode !== "SEGREGATION") {
+      setSegLog(null);
+      setSegError(null);
+      setSegLoading(false);
+      return;
+    }
+
+    const fetchLog = async () => {
+      setSegLoading(true);
+      setSegError(null);
+      setSegLog(null);
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/v1/admin/segregation/logs/${logId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.detail || "Failed to load segregation log.");
+        }
+
+        const data = (await res.json()) as SegregationLogDetail;
+        setSegLog(data);
+
+        setUserId(String(data.citizen.id));
+        setTokens(data.recommended_pcc ? String(data.recommended_pcc) : "");
+        setReason(
+          `Segregation reward · Log #${data.id} · Score ${data.score}`,
+        );
+      } catch (e: any) {
+        setSegError(e?.message || "Error loading segregation log.");
+      } finally {
+        setSegLoading(false);
+      }
+    };
+
+    fetchLog();
+  }, [logId, mode]);
+
+  const submitManual = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -35,11 +116,11 @@ export const AdminPccAwardPage: React.FC = () => {
     const parsedUserId = parseInt(userId, 10);
     const parsedTokens = parseFloat(tokens);
 
-    if (isNaN(parsedUserId) || parsedUserId <= 0) {
+    if (!Number.isFinite(parsedUserId) || parsedUserId <= 0) {
       setError("Please enter a valid user ID.");
       return;
     }
-    if (isNaN(parsedTokens) || parsedTokens <= 0) {
+    if (!Number.isFinite(parsedTokens) || parsedTokens <= 0) {
       setError("Please enter a positive PCC token amount.");
       return;
     }
@@ -74,30 +155,91 @@ export const AdminPccAwardPage: React.FC = () => {
       const data = (await res.json()) as AwardResponse;
 
       setSuccess(
-        `Awarded ${parsedTokens.toFixed(
-          1
-        )} PCC to ${data.user.email}. New balance: ${data.new_balance.toFixed(
-          1
-        )}.`
+        `Awarded ${parsedTokens.toFixed(1)} PCC to ${data.user.email}. New balance: ${data.new_balance.toFixed(1)}.`,
       );
       setUserId("");
       setTokens("");
       setReason("");
     } catch (err: any) {
-      console.error(err);
-      setError(err.message ?? "Error awarding PCC tokens.");
+      setError(err?.message || "Error awarding PCC tokens.");
     } finally {
       setLoading(false);
     }
   };
 
+  const submitSegregationAward = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!logId) {
+      setError("No segregation log selected. Open this page with ?logId=123.");
+      return;
+    }
+
+    const parsedTokens = parseFloat(tokens);
+    if (!Number.isFinite(parsedTokens) || parsedTokens <= 0) {
+      setError("Please enter a positive PCC token amount.");
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setError("Not authenticated.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/v1/admin/segregation/logs/${logId}/award-pcc`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            pcc_tokens: parsedTokens,
+            reason: reason.trim() || undefined,
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.detail || "Failed to award PCC for log.");
+      }
+
+      const data = (await res.json()) as { awarded_pcc: number; new_balance: number };
+
+      setSuccess(
+        `Awarded ${data.awarded_pcc.toFixed(1)} PCC for segregation log #${logId}. Citizen new balance: ${data.new_balance.toFixed(1)}.`,
+      );
+
+      setSegLog((prev) =>
+        prev
+          ? {
+              ...prev,
+              pcc_awarded: true,
+            }
+          : prev,
+      );
+    } catch (err: any) {
+      setError(err?.message || "Error awarding PCC for log.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeSubmit = mode === "SEGREGATION" ? submitSegregationAward : submitManual;
+
   return (
     <div className="relative">
-      {/* soft emerald glow */}
       <div className="pointer-events-none absolute inset-x-0 -top-10 h-20 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
 
       <div className="relative space-y-5">
-        {/* Header */}
         <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/80 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
@@ -108,24 +250,151 @@ export const AdminPccAwardPage: React.FC = () => {
               PCC token console
             </h1>
             <p className="mt-1 text-xs text-slate-600">
-              Manually award PCC tokens for pilots, events or corrections. Use
-              sparingly and keep a short note for audit.
+              Award PCC either manually or against a segregation log.
             </p>
           </div>
 
           <div className="mt-1 rounded-2xl border border-emerald-100/80 bg-white/80 px-3 py-2 text-[0.7rem] text-slate-600 shadow-sm shadow-emerald-100/80 backdrop-blur-sm max-w-xs">
-            <p className="font-semibold text-slate-900 mb-1">
-              Quick tips for safe awards
-            </p>
-            <ul className="space-y-0.5 list-disc list-inside">
-              <li>Confirm user ID from Users panel.</li>
-              <li>Record event name in the reason field.</li>
-              <li>Use decimals for partial PCC (e.g. 2.5).</li>
-            </ul>
+            <p className="font-semibold text-slate-900 mb-1">Mode</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("MANUAL")}
+                className={[
+                  "rounded-full px-3 py-1 text-[0.7rem] font-semibold transition",
+                  mode === "MANUAL"
+                    ? "bg-emerald-700 text-white"
+                    : "bg-white/70 text-slate-700 hover:bg-white",
+                ].join(" ")}
+              >
+                Manual
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("SEGREGATION")}
+                disabled={!logId}
+                className={[
+                  "rounded-full px-3 py-1 text-[0.7rem] font-semibold transition",
+                  !logId
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : mode === "SEGREGATION"
+                      ? "bg-emerald-700 text-white"
+                      : "bg-white/70 text-slate-700 hover:bg-white",
+                ].join(" ")}
+                title={!logId ? "Open with ?logId=123 to enable" : undefined}
+              >
+                Segregation log
+              </button>
+            </div>
+            {!logId && (
+              <p className="mt-2 text-[0.65rem] text-slate-500">
+                To award via segregation log: open this page {" "}
+                <span className="font-mono">from dashboard</span>.
+              </p>
+            )}
           </div>
         </header>
 
-        {/* Form card */}
+        {mode === "SEGREGATION" && (
+          <section
+            className="
+              max-w-3xl
+              rounded-[1.8rem]
+              border border-emerald-100/80
+              bg-white/80
+              px-5 py-4
+              shadow-md shadow-emerald-100/70
+              backdrop-blur-sm
+            "
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Segregation log context
+                </h2>
+                <p className="text-[0.7rem] text-slate-500">
+                  This section auto-fills the citizen + recommended PCC.
+                </p>
+              </div>
+              <div className="text-[0.7rem] text-slate-600">
+                {logId ? (
+                  <span className="rounded-full border border-emerald-100 bg-white/80 px-3 py-1">
+                    Log #{logId}
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-red-100 bg-red-50/80 px-3 py-1 text-red-700">
+                    Missing logId
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {segLoading && (
+              <div className="mt-3 text-xs text-slate-600">Loading log…</div>
+            )}
+
+            {segError && (
+              <div
+                className="
+                  mt-3 rounded-2xl border border-red-100/80
+                  bg-red-50/90 px-3 py-2 text-xs text-red-700
+                "
+              >
+                {segError}
+              </div>
+            )}
+
+            {segLog && (
+              <div className="mt-3 grid gap-3 text-[0.75rem] text-slate-700 sm:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                  <div className="text-[0.65rem] text-slate-500">Citizen</div>
+                  <div className="mt-1 font-semibold text-slate-900">
+                    {segLog.citizen.full_name || segLog.citizen.email}
+                  </div>
+                  <div className="mt-1 text-[0.65rem] text-slate-500">
+                    User ID: {segLog.citizen.id}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                  <div className="text-[0.65rem] text-slate-500">Score</div>
+                  <div className="mt-1 font-semibold text-slate-900">
+                    {segLog.score}
+                  </div>
+                  <div className="mt-1 text-[0.65rem] text-slate-500">
+                    Recommended PCC: {segLog.recommended_pcc.toFixed(1)}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                  <div className="text-[0.65rem] text-slate-500">Household</div>
+                  <div className="mt-1 font-semibold text-slate-900">
+                    #{segLog.household_id}
+                  </div>
+                  <div className="mt-1 text-[0.65rem] text-slate-500">
+                    Log date:{" "}
+                    {new Date(segLog.log_date).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                  <div className="text-[0.65rem] text-slate-500">Award status</div>
+                  <div className="mt-1 font-semibold">
+                    {segLog.pcc_awarded ? (
+                      <span className="text-emerald-700">Already awarded</span>
+                    ) : (
+                      <span className="text-amber-700">Pending</span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-[0.65rem] text-slate-500">
+                    Waste report: {segLog.waste_report_id ?? "—"}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
         <section
           className="
             max-w-xl
@@ -137,7 +406,7 @@ export const AdminPccAwardPage: React.FC = () => {
             backdrop-blur-sm
           "
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={activeSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-[0.7rem] font-medium text-slate-600">
@@ -150,13 +419,17 @@ export const AdminPccAwardPage: React.FC = () => {
                     bg-white/80 px-3 py-2 text-sm
                     shadow-sm shadow-emerald-50
                     focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
+                    disabled:opacity-70
                   "
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   placeholder="e.g. 42"
+                  disabled={mode === "SEGREGATION"}
                 />
                 <p className="mt-1 text-[0.65rem] text-slate-500">
-                  Find this in the Users &amp; approvals list.
+                  {mode === "SEGREGATION"
+                    ? "Auto-filled from segregation log."
+                    : "Find this in the Users & approvals list."}
                 </p>
               </div>
 
@@ -185,7 +458,7 @@ export const AdminPccAwardPage: React.FC = () => {
 
             <div>
               <label className="mb-1.5 block text-[0.7rem] font-medium text-slate-600">
-                Reason (optional but recommended)
+                Reason (recommended)
               </label>
               <textarea
                 className="
@@ -197,11 +470,10 @@ export const AdminPccAwardPage: React.FC = () => {
                 rows={3}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Green volunteer drive, school clean-up, correction for missed tokens, etc."
+                placeholder="Segregation reward / event / correction / audit note…"
               />
             </div>
 
-            {/* Alerts */}
             {error && (
               <div
                 className="
@@ -231,7 +503,11 @@ export const AdminPccAwardPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={
+                  loading ||
+                  (mode === "SEGREGATION" &&
+                    (!!segLog?.pcc_awarded || !logId || segLoading))
+                }
                 className="
                   inline-flex items-center justify-center
                   rounded-full bg-emerald-700
@@ -241,12 +517,17 @@ export const AdminPccAwardPage: React.FC = () => {
                   disabled:cursor-not-allowed disabled:opacity-60
                 "
               >
-                {loading ? "Awarding…" : "Award PCC tokens"}
+                {loading
+                  ? "Awarding…"
+                  : mode === "SEGREGATION"
+                    ? "Award PCC for segregation log"
+                    : "Award PCC tokens"}
               </button>
 
               <p className="text-[0.7rem] text-slate-500">
-                Awards are logged in the carbon ledger alongside automated PCC
-                from segregation.
+                {mode === "SEGREGATION"
+                  ? "Awards are locked to one award per log."
+                  : "Manual awards are logged in the carbon ledger."}
               </p>
             </div>
           </form>

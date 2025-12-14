@@ -31,13 +31,10 @@ class Household(Base):
     city = Column(String, nullable=True)
     pincode = Column(String, nullable=True)
 
-    # who registered / primary contact
     owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # ✅ timezone-aware
     created_at = Column(DateTime(timezone=True), default=utc_now)
 
-    # flags
     is_bulk_generator = Column(Boolean, default=False)
     is_primary = Column(Boolean, default=False)
 
@@ -46,31 +43,18 @@ class Household(Base):
 
 
 class SegregationLog(Base):
-    """
-    Segregation log in KG (not booleans).
-
-    - dry_kg / wet_kg / reject_kg
-    - segregation_score (0–100)
-    """
-
     __tablename__ = "segregation_logs"
 
     id = Column(Integer, primary_key=True, index=True)
 
     household_id = Column(Integer, ForeignKey("households.id"), nullable=False)
 
-    # which worker recorded this log
     worker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # optional link to waste report
     waste_report_id = Column(Integer, ForeignKey("waste_reports.id"), nullable=True)
 
-    waste_report = relationship(
-        "WasteReport",
-        back_populates="segregation_logs",
-    )
+    citizen_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # logical date of the log (calendar day, NOT timestamp)
     log_date = Column(Date, nullable=False)
 
     dry_kg = Column(Float, nullable=False, default=0.0)
@@ -81,5 +65,18 @@ class SegregationLog(Base):
 
     notes = Column(String, nullable=True)
 
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+
+    pcc_awarded = Column(Boolean, nullable=False, default=False)
+    pcc_awarded_at = Column(DateTime(timezone=True), nullable=True)
+    awarded_pcc_tokens = Column(Float, nullable=True)
+    award_reason = Column(String, nullable=True)
+
     household = relationship(Household, back_populates="segregation_logs")
-    worker = relationship(User, backref="segregation_logs")
+    worker = relationship(User, foreign_keys=[worker_id], backref="segregation_logs")
+    citizen = relationship(User, foreign_keys=[citizen_id], backref="citizen_segregation_logs")
+
+    waste_report = relationship(
+        "WasteReport",
+        back_populates="segregation_logs",
+    )

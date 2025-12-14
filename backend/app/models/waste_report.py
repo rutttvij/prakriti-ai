@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 
 from sqlalchemy import (
@@ -14,6 +14,10 @@ from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 from app.models.user import User
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class WasteReportStatus(str, enum.Enum):
@@ -35,26 +39,35 @@ class WasteReport(Base):
     # 🔹 Link to household / site (optional but preferred)
     household_id = Column(Integer, ForeignKey("households.id"), nullable=True)
 
-    image_path = Column(String, nullable=True)  # local file path
+    image_path = Column(String, nullable=True)
     description = Column(String, nullable=True)
 
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
 
     # Snapshot of AI classification at time of report
-    classification_label = Column(String, nullable=True)        # e.g. "magazines"
-    classification_confidence = Column(Float, nullable=True)    # 0.0–1.0
-    classification_recyclable = Column(Boolean, nullable=True)  # True / False
+    classification_label = Column(String, nullable=True)
+    classification_confidence = Column(Float, nullable=True)
+    classification_recyclable = Column(Boolean, nullable=True)
 
-    status = Column(String, nullable=False, default=WasteReportStatus.OPEN.value)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(
+        String,
+        nullable=False,
+        default=WasteReportStatus.OPEN.value,
+    )
+
+    # ✅ timezone-aware UTC timestamps
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     assigned_worker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    resolved_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    segregation_logs = relationship("SegregationLog", back_populates="waste_report")
+    segregation_logs = relationship(
+        "SegregationLog",
+        back_populates="waste_report",
+    )
 
     reporter = relationship(
         User,
@@ -68,7 +81,6 @@ class WasteReport(Base):
         backref="reports_assigned",
     )
 
-    # 🔹 Household / site associated with this report
     household = relationship(
         "Household",
         backref="waste_reports",

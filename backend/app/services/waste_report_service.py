@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from sqlalchemy.orm import Session
@@ -13,25 +13,16 @@ from app.services.badge_service import (
 from app.services.carbon_service import add_carbon_activity
 
 
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _build_report_public_id(
     db: Session,
     *,
     reporter: User,
 ) -> str:
-    """
-    Build a per-reporter public ID.
-
-    Examples:
-      CITIZEN, id=2, first report  -> CIT-2-000001
-      CITIZEN, id=2, second report -> CIT-2-000002
-      BULK_GENERATOR, id=5, first  -> BULK-5-000001
-    """
-    # Count existing reports for this reporter
-    count = (
-        db.query(WasteReport)
-        .filter(WasteReport.reporter_id == reporter.id)
-        .count()
-    )
+    count = db.query(WasteReport).filter(WasteReport.reporter_id == reporter.id).count()
     next_seq = count + 1
 
     prefix_map = {
@@ -53,25 +44,17 @@ def create_waste_report(
     description: Optional[str],
     latitude: Optional[float],
     longitude: Optional[float],
-    # classification snapshot
     classification_label: Optional[str] = None,
     classification_confidence: Optional[float] = None,
     classification_recyclable: Optional[bool] = None,
-    # ⭐ NEW: link this report to a household / site if known
     household_id: Optional[int] = None,
 ) -> WasteReport:
-    """
-    Create a new waste report, assign a per-user public_id, and
-    (optionally) link it to a household/site.
-
-    This is what the /waste/reports endpoint calls after
-    running the ML classification.
-    """
     reporter = db.query(User).filter(User.id == reporter_id).first()
     if reporter is None:
         raise ValueError("Reporter user not found")
 
     public_id = _build_report_public_id(db, reporter=reporter)
+    now = _now_utc()
 
     report = WasteReport(
         reporter_id=reporter_id,
@@ -84,24 +67,22 @@ def create_waste_report(
         classification_confidence=classification_confidence,
         classification_recyclable=classification_recyclable,
         status=WasteReportStatus.OPEN.value,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-        household_id=household_id,  # ⭐ store the link here
+        created_at=now,
+        updated_at=now,
+        household_id=household_id,
     )
     db.add(report)
     db.commit()
     db.refresh(report)
 
-    # Optionally: award a "First Reporter" badge on first report
     _handle_reporting_badges_on_create(db, reporter_id)
 
     return report
 
 
 def _handle_reporting_badges_on_create(db: Session, reporter_id: int) -> None:
-    from app.models.badge import UserBadge, Badge  # noqa: F401  (import used indirectly)
+    from app.models.badge import UserBadge, Badge  # noqa: F401
 
-    # simple: if user has at least 1 report, award "Active Reporter"
     count = db.query(WasteReport).filter(WasteReport.reporter_id == reporter_id).count()
     if count < 1:
         return
@@ -115,11 +96,7 @@ def _handle_reporting_badges_on_create(db: Session, reporter_id: int) -> None:
         description="Submitted at least one waste report",
         icon="badge_reporting_active",
     )
-    award_badge_if_not_awarded(
-        db=db,
-        user_id=reporter_id,
-        criteria_key=criteria_key,
-    )
+    award_badge_if_not_awarded(db=db, user_id=reporter_id, criteria_key=criteria_key)
 
 
 def update_report_status(
@@ -129,26 +106,18 @@ def update_report_status(
     new_status: WasteReportStatus,
     assigned_worker_id: Optional[int] = None,
 ) -> WasteReport:
-    """
-    Update status (and optionally assignment) of a waste report.
-
-    - Called by super admin status endpoint
-    - Also reused by worker status endpoint so RESOLVED can
-      trigger rewards + carbon accounting.
-    """
     report = db.query(WasteReport).filter(WasteReport.id == report_id).first()
     if report is None:
         raise ValueError("Report not found")
 
     report.status = new_status.value
-    report.updated_at = datetime.utcnow()
+    report.updated_at = _now_utc()
 
     if assigned_worker_id is not None:
         report.assigned_worker_id = assigned_worker_id
 
-    # If resolved, award carbon credits to the worker and/or reporter
     if new_status == WasteReportStatus.RESOLVED:
-        report.resolved_at = datetime.utcnow()
+        report.resolved_at = _now_utc()
         _handle_resolution_rewards(db, report)
 
     db.commit()
@@ -157,11 +126,6 @@ def update_report_status(
 
 
 def _handle_resolution_rewards(db: Session, report: WasteReport) -> None:
-    """
-    On resolution:
-    - Give small CO2e credit to assigned worker
-    - Give small CO2e credit to reporter
-    """
     co2e_worker = 0.2
     co2e_reporter = 0.1
 

@@ -4,9 +4,6 @@ import api from "../../lib/api";
 import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
 import { BACKEND_ORIGIN } from "../../lib/config";
 
-/* -------------------------------
-   Status badge styling
--------------------------------- */
 function statusStyles(status: WasteReportStatus) {
   switch (status) {
     case "OPEN":
@@ -17,6 +14,44 @@ function statusStyles(status: WasteReportStatus) {
       return "bg-emerald-50/80 text-emerald-700 border-emerald-200 shadow-[0_0_6px_rgba(16,185,129,0.25)]";
     default:
       return "bg-slate-50/80 text-slate-700 border-slate-200";
+  }
+}
+
+function formatIST(input: string | Date | null | undefined) {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
+function extractApiError(err: any): string {
+  const data = err?.response?.data;
+  if (!data) return "Something went wrong.";
+
+  if (typeof data?.detail === "string") return data.detail;
+
+  if (Array.isArray(data?.detail)) {
+    const first = data.detail[0];
+    const msg = first?.msg ? String(first.msg) : "Validation error.";
+    const loc = Array.isArray(first?.loc) ? first.loc.join(" → ") : "";
+    return loc ? `${msg} (${loc})` : msg;
+  }
+
+  if (typeof data?.message === "string") return data.message;
+
+  try {
+    return JSON.stringify(data);
+  } catch {
+    return "Something went wrong.";
   }
 }
 
@@ -31,11 +66,12 @@ export function WorkerAvailableReportsPage() {
   useEffect(() => {
     async function load() {
       try {
+        setError(null);
         const res = await api.get<WasteReport[]>("/waste/reports/available");
         setReports(res.data);
       } catch (err) {
         console.error(err);
-        setError("Failed to load available reports.");
+        setError(extractApiError(err) || "Failed to load available reports.");
       } finally {
         setLoading(false);
       }
@@ -50,22 +86,23 @@ export function WorkerAvailableReportsPage() {
 
   async function handleClaim(reportId: number) {
     try {
+      setError(null);
       setClaimingId(reportId);
       const res = await api.post(`/waste/reports/${reportId}/claim`);
       const claimed = res.data;
 
-      // Remove from list after claiming
       setReports((prev) => prev.filter((r) => r.id !== claimed.id));
     } catch (err: any) {
       console.error(err);
-      setError(err?.response?.data?.detail || "Could not claim this report.");
+      setError(extractApiError(err) || "Could not claim this report.");
     } finally {
       setClaimingId(null);
     }
   }
 
-  // Navigate to segregation dashboard with context from this report
   function handleLogSegregation(report: WasteReport) {
+    setError(null);
+
     if (!report.household_id) {
       setError("This report is not linked to a household yet.");
       return;
@@ -82,9 +119,6 @@ export function WorkerAvailableReportsPage() {
     );
   }
 
-  /* -------------------------------
-     Loading State
-  -------------------------------- */
   if (loading) {
     return (
       <div className="animate-pulse text-slate-600 text-sm">
@@ -95,10 +129,8 @@ export function WorkerAvailableReportsPage() {
 
   return (
     <div className="relative space-y-6">
-      {/* Soft emerald glow */}
       <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
 
-      {/* Header */}
       <header className="relative z-10 space-y-1">
         <h1 className="text-2xl font-bold text-emerald-900">
           Available Reports
@@ -115,7 +147,6 @@ export function WorkerAvailableReportsPage() {
         </div>
       )}
 
-      {/* Empty state */}
       {reports.length === 0 && !error && (
         <div
           className="
@@ -134,7 +165,7 @@ export function WorkerAvailableReportsPage() {
 
       <div className="space-y-4">
         {reports.map((r) => {
-          const created = new Date(r.created_at).toLocaleString();
+          const created = formatIST(r.created_at);
 
           return (
             <div
@@ -147,7 +178,6 @@ export function WorkerAvailableReportsPage() {
                 md:flex-row md:items-center
               "
             >
-              {/* Left section: info */}
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-sm font-semibold text-slate-900">
@@ -174,14 +204,12 @@ export function WorkerAvailableReportsPage() {
                   {r.latitude && r.longitude && (
                     <>
                       {" • "}
-                      Location: {r.latitude.toFixed(5)},{" "}
-                      {r.longitude.toFixed(5)}
+                      Location: {r.latitude.toFixed(5)}, {r.longitude.toFixed(5)}
                     </>
                   )}
                 </p>
               </div>
 
-              {/* Middle: image */}
               {r.image_path && (
                 <div className="w-full md:w-44 flex-shrink-0">
                   <div
@@ -200,7 +228,6 @@ export function WorkerAvailableReportsPage() {
                 </div>
               )}
 
-              {/* Right section: actions */}
               <div className="flex flex-col items-stretch md:items-end md:w-44 gap-2">
                 <button
                   onClick={() => handleClaim(r.id)}
@@ -214,7 +241,6 @@ export function WorkerAvailableReportsPage() {
                   {claimingId === r.id ? "Claiming…" : "Accept Job"}
                 </button>
 
-                {/* Log segregation shortcut – only if linked to a household/site */}
                 {r.household_id && (
                   <button
                     type="button"

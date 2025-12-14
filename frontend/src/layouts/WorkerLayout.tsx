@@ -15,6 +15,7 @@ export default function WorkerLayout({ children }: Props) {
     { to: "/worker/dashboard", label: "Dashboard" },
     { to: "/worker/reports/available", label: "Available reports" },
     { to: "/worker/reports/my", label: "My assigned reports" },
+    { to: "/worker/route-map", label: "Route map" }, // ⭐ NEW
     { to: "/worker/segregation", label: "Segregation logs" },
   ];
 
@@ -110,7 +111,6 @@ export default function WorkerLayout({ children }: Props) {
         {/* Main content area */}
         {/* ----------------------------- */}
         <section className="flex-1">
-          {/* padding so content doesn't hide behind mobile tabs */}
           <div className="pt-14 sm:pt-0">{children}</div>
         </section>
       </div>

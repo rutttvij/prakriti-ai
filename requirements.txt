@@ -26,5 +26,6 @@ npm install -D tailwindcss@3 postcss autoprefixer
 npx tailwindcss@latest init -p
 
 npm install axios react-router-dom
+npm i leaflet react-leaflet
 
 npm run dev

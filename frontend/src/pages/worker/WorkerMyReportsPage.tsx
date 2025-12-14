@@ -17,6 +17,22 @@ function statusStyles(status: WasteReportStatus) {
   }
 }
 
+function formatIST(input: string | Date | null | undefined) {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
 export function WorkerMyReportsPage() {
   const [reports, setReports] = useState<WasteReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +63,7 @@ export function WorkerMyReportsPage() {
 
   async function updateStatus(reportId: number, status: WasteReportStatus) {
     try {
+      setError(null);
       setUpdatingId(reportId);
       const res = await api.patch<WasteReport>(
         `/waste/reports/${reportId}/worker-status`,
@@ -65,7 +82,6 @@ export function WorkerMyReportsPage() {
     }
   }
 
-  // Navigate to segregation page with context so the worker can log for this site
   function handleLogSegregation(report: WasteReport) {
     if (!report.household_id) {
       setError("This report is not linked to a household yet.");
@@ -93,10 +109,8 @@ export function WorkerMyReportsPage() {
 
   return (
     <div className="relative space-y-6">
-      {/* Decorative Emerald Glow */}
       <div className="pointer-events-none absolute inset-x-0 -top-12 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
 
-      {/* HEADER */}
       <header className="relative z-10 space-y-1">
         <h1 className="text-2xl font-bold text-emerald-900">
           My Assigned Reports
@@ -122,13 +136,10 @@ export function WorkerMyReportsPage() {
         </p>
       )}
 
-      {/* LIST OF REPORT CARDS */}
       <div className="relative space-y-4">
         {reports.map((r) => {
-          const created = new Date(r.created_at).toLocaleString();
-          const resolved = r.resolved_at
-            ? new Date(r.resolved_at).toLocaleString()
-            : null;
+          const created = formatIST(r.created_at);
+          const resolved = r.resolved_at ? formatIST(r.resolved_at) : null;
 
           const canStart = r.status === "OPEN" || r.status === "IN_PROGRESS";
           const canResolve = r.status !== "RESOLVED";
@@ -143,9 +154,7 @@ export function WorkerMyReportsPage() {
                 p-5 md:flex-row md:items-stretch md:justify-between
               "
             >
-              {/* LEFT — INFORMATION */}
               <div className="flex-1 space-y-2">
-                {/* Title + Status */}
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-sm font-semibold text-slate-900">
                     {r.public_id ? `Report ${r.public_id}` : `Report #${r.id}`}
@@ -161,12 +170,10 @@ export function WorkerMyReportsPage() {
                   </span>
                 </div>
 
-                {/* Description */}
                 {r.description && (
                   <p className="text-sm text-slate-700">{r.description}</p>
                 )}
 
-                {/* Metadata */}
                 <p className="text-xs text-slate-500">
                   Created: {created}
                   {resolved && (
@@ -182,7 +189,6 @@ export function WorkerMyReportsPage() {
                 </p>
               </div>
 
-              {/* IMAGE */}
               {r.image_path && (
                 <div className="w-full flex-shrink-0 md:w-40">
                   <div
@@ -200,9 +206,7 @@ export function WorkerMyReportsPage() {
                 </div>
               )}
 
-              {/* BUTTONS */}
               <div className="flex w-full flex-col items-stretch justify-center gap-2 md:w-56">
-                {/* Log segregation for this site (shortcut into segregation dashboard) */}
                 {r.household_id && (
                   <button
                     type="button"
@@ -217,7 +221,6 @@ export function WorkerMyReportsPage() {
                   </button>
                 )}
 
-                {/* Mark In Progress */}
                 <button
                   type="button"
                   onClick={() => updateStatus(r.id, "IN_PROGRESS")}
@@ -228,12 +231,9 @@ export function WorkerMyReportsPage() {
                     hover:bg-sky-100/80 disabled:opacity-50
                   "
                 >
-                  {updatingId === r.id && canStart
-                    ? "Updating…"
-                    : "Mark in progress"}
+                  {updatingId === r.id && canStart ? "Updating…" : "Mark in progress"}
                 </button>
 
-                {/* Mark Resolved */}
                 <button
                   type="button"
                   onClick={() => updateStatus(r.id, "RESOLVED")}
@@ -245,9 +245,7 @@ export function WorkerMyReportsPage() {
                     hover:bg-emerald-700 disabled:opacity-50
                   "
                 >
-                  {updatingId === r.id && canResolve
-                    ? "Updating…"
-                    : "Mark resolved"}
+                  {updatingId === r.id && canResolve ? "Updating…" : "Mark resolved"}
                 </button>
               </div>
             </div>

@@ -38,6 +38,22 @@ function classificationPillStyles(recyclable: boolean | undefined) {
     : "border-amber-400 bg-amber-50 text-amber-700";
 }
 
+function formatIST(input: string | Date | null | undefined) {
+  if (!input) return "";
+  const d = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
 // Same metadata as backend (shortened descriptions for UI)
 const CLASS_METADATA: Record<
   string,
@@ -308,10 +324,7 @@ const CLASS_METADATA: Record<
     type: "Steel food cans",
     description: "Tinned food containers made from steel.",
     recyclable: true,
-    recycle_steps: [
-      "Empty and rinse.",
-      "Place in metal recycling bin.",
-    ],
+    recycle_steps: ["Empty and rinse.", "Place in metal recycling bin."],
   },
   styrofoam_cups: {
     type: "Styrofoam cups",
@@ -326,10 +339,7 @@ const CLASS_METADATA: Record<
     type: "Styrofoam food containers",
     description: "Takeaway food boxes made from Styrofoam.",
     recyclable: false,
-    dispose_steps: [
-      "Remove food residue.",
-      "Dispose in dry non-recyclable waste.",
-    ],
+    dispose_steps: ["Remove food residue.", "Dispose in dry non-recyclable waste."],
   },
   tea_bags: {
     type: "Tea bags",
@@ -351,8 +361,7 @@ function buildClassificationFromReport(r: any): WasteClassificationSummary | nul
     return {
       id: label,
       type: label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      description:
-        "AI detected this waste type based on the uploaded photo.",
+      description: "AI detected this waste type based on the uploaded photo.",
       recyclable: !!r.classification_recyclable,
       confidence:
         typeof r.classification_confidence === "number"
@@ -446,10 +455,8 @@ export default function MyReportsPage() {
 
       <div className="space-y-3">
         {reports.map((r) => {
-          const created = new Date(r.created_at).toLocaleString();
-          const resolved = r.resolved_at
-            ? new Date(r.resolved_at).toLocaleString()
-            : null;
+          const created = formatIST(r.created_at);
+          const resolved = r.resolved_at ? formatIST(r.resolved_at) : null;
           const cls = r.classification ?? null;
 
           return (
@@ -495,13 +502,13 @@ export default function MyReportsPage() {
                     </>
                   )}
                 </p>
+
                 {r.latitude && r.longitude && (
                   <p className="text-xs text-slate-500">
                     Location: {r.latitude}, {r.longitude}
                   </p>
                 )}
 
-                {/* Classification report module */}
                 {cls && (
                   <div className="mt-1 space-y-1 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -562,16 +569,12 @@ export default function MyReportsPage() {
                 )}
               </div>
 
-              {/* Image thumbnail + open viewer */}
               {r.image_path && (
                 <div className="w-full md:w-40 flex-shrink-0">
                   <button
                     type="button"
                     onClick={() =>
-                      openImagePreview(
-                        r.image_path!,
-                        `Waste report ${r.id} image`,
-                      )
+                      openImagePreview(r.image_path!, `Waste report ${r.id} image`)
                     }
                     className="group block w-full"
                   >
@@ -595,7 +598,6 @@ export default function MyReportsPage() {
         })}
       </div>
 
-      {/* Full image preview modal */}
       {previewImageUrl && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60">
           <button

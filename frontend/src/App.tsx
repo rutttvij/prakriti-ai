@@ -27,6 +27,7 @@ import { WorkerDashboardPage } from "./pages/worker/WorkerDashboardPage";
 import { WorkerAvailableReportsPage } from "./pages/worker/WorkerAvailableReportsPage";
 import { WorkerMyReportsPage } from "./pages/worker/WorkerMyReportsPage";
 import WorkerSegregationPage from "./pages/worker/WorkerSegregationPage";
+import WorkerRouteMapPage from "./pages/worker/WorkerRouteMapPage";
 
 /* Layout & Auth */
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -119,8 +120,7 @@ function App() {
                 </CitizenLayout>
               </ProtectedRoute>
             }
-           />
-
+          />
 
           {/* ---------- WASTE WORKER ROUTES ---------- */}
           <Route
@@ -162,6 +162,18 @@ function App() {
               <ProtectedRoute>
                 <WorkerLayout>
                   <WorkerSegregationPage />
+                </WorkerLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ⭐ NEW: WORKER ROUTE MAP */}
+          <Route
+            path="/worker/route-map"
+            element={
+              <ProtectedRoute>
+                <WorkerLayout>
+                  <WorkerRouteMapPage />
                 </WorkerLayout>
               </ProtectedRoute>
             }

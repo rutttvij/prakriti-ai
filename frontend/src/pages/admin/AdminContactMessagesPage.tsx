@@ -190,7 +190,7 @@ export const AdminContactMessagesPage: React.FC = () => {
                       <td className="px-4 py-3 text-slate-900 font-medium sm:px-5">
                         {msg.name}
                         <div className="text-[0.65rem] text-slate-500">
-                          ID #{msg.id}
+                          No.{msg.id}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-emerald-700 sm:px-5">

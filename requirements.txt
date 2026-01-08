@@ -1,0 +1,31 @@
+backend:
+
+cd /Users/rutvijjadhav/Desktop/prakriti-ai
+source venv/bin/activate
+
+pip install fastapi "uvicorn[standard]" pydantic psycopg2-binary sqlalchemy \
+"python-jose[cryptography]" python-multipart "passlib[bcrypt]" \
+python-dotenv pillow alembic
+
+pip install email-validator
+
+pip install timm
+
+pip install numpy
+
+pip install torch torchvision pillow
+
+uvicorn app.main:app --reload
+
+frontend:
+
+cd frontend
+npm install
+
+npm install -D tailwindcss@3 postcss autoprefixer
+npx tailwindcss@latest init -p
+
+npm install axios react-router-dom
+npm i leaflet react-leaflet
+
+npm run dev

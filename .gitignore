@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+*.sqlite3
+
+# FastAPI uploads
+uploads/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Node modules (for frontend later)
+node_modules/
+dist/
+
+# ML models (local only, not pushed to GitHub)
+backend/app/ml_models/
+# or, if you want the folder tracked but not the weights:
+# backend/app/ml_models/*.pth
+
+# Local ML models – do not push to GitHub
+backend/app/ml/best_effnet_b4.pth
+backend/app/ml_models/best_effnet_b4.pth

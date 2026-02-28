@@ -158,7 +158,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="tel"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
             />
@@ -169,7 +169,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={ward}
               onChange={(e) => setWard(e.target.value)}
             />
@@ -179,7 +179,7 @@ const RegisterPage: React.FC = () => {
               Address / Landmark (optional)
             </label>
             <textarea
-              className="w-full rounded-2xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input min-h-[84px]"
               rows={2}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -198,7 +198,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="tel"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
             />
@@ -209,7 +209,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={workerId}
               onChange={(e) => setWorkerId(e.target.value)}
             />
@@ -220,7 +220,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={ward}
               onChange={(e) => setWard(e.target.value)}
             />
@@ -231,7 +231,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={organization}
               onChange={(e) => setOrganization(e.target.value)}
             />
@@ -249,7 +249,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={bulkOrgName}
               onChange={(e) => setBulkOrgName(e.target.value)}
             />
@@ -260,7 +260,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="text"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={bulkType}
               onChange={(e) => setBulkType(e.target.value)}
             />
@@ -271,7 +271,7 @@ const RegisterPage: React.FC = () => {
             </label>
             <input
               type="tel"
-              className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input"
               value={bulkContactMobile}
               onChange={(e) => setBulkContactMobile(e.target.value)}
             />
@@ -281,7 +281,7 @@ const RegisterPage: React.FC = () => {
               Address / Ward
             </label>
             <textarea
-              className="w-full rounded-2xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="ui-input min-h-[84px]"
               rows={2}
               value={bulkAddressWard}
               onChange={(e) => setBulkAddressWard(e.target.value)}
@@ -304,8 +304,7 @@ const RegisterPage: React.FC = () => {
   return (
     <main
       className="
-       relative flex-1 flex items-center
-       bg-gradient-to-b from-emerald-50 via-emerald-50 to-slate-50
+       relative flex-1 flex items-center landing-aurora
        overflow-hidden
       "
     >
@@ -336,8 +335,7 @@ const RegisterPage: React.FC = () => {
           <div
             className="
               mt-4 grid gap-3 text-xs text-slate-800
-              rounded-3xl border border-emerald-100/80 bg-white/70 p-4
-              shadow-md shadow-emerald-100/70 backdrop-blur-sm
+              surface-card p-4
             "
           >
             <div className="flex gap-3">
@@ -391,12 +389,7 @@ const RegisterPage: React.FC = () => {
         <section
           className="
             md:w-1/2
-            rounded-[1.75rem]
-            border border-emerald-100/80
-            bg-white/80
-            shadow-xl shadow-emerald-200/70
-            backdrop-blur-md
-            p-5 sm:p-6
+            surface-card-strong p-5 sm:p-6
           "
         >
           {/* Role pills */}
@@ -411,8 +404,8 @@ const RegisterPage: React.FC = () => {
                     onClick={() => setRole(r)}
                     className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition ${
                       active
-                        ? "border-emerald-500 bg-emerald-600 text-white shadow-sm shadow-emerald-400/70"
-                        : "border-emerald-100 bg-white/70 text-emerald-800 hover:bg-emerald-50"
+                        ? "border-slate-900 bg-slate-900 text-white shadow-[0_10px_20px_rgba(15,23,42,0.28)]"
+                        : "border-emerald-100 bg-white/80 text-emerald-800 hover:bg-white"
                     }`}
                   >
                     {roleLabel(r)}
@@ -438,7 +431,7 @@ const RegisterPage: React.FC = () => {
               </label>
               <input
                 type="text"
-                className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="ui-input"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -451,7 +444,7 @@ const RegisterPage: React.FC = () => {
               </label>
               <input
                 type="email"
-                className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="ui-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -466,7 +459,7 @@ const RegisterPage: React.FC = () => {
                 <input
                   type="text"
                   maxLength={12}
-                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="ui-input"
                   value={governmentId}
                   onChange={(e) => setGovernmentId(e.target.value)}
                   required
@@ -479,7 +472,7 @@ const RegisterPage: React.FC = () => {
                 <input
                   type="text"
                   maxLength={6}
-                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="ui-input"
                   value={pincode}
                   onChange={(e) => setPincode(e.target.value)}
                   required
@@ -494,7 +487,7 @@ const RegisterPage: React.FC = () => {
                 </label>
                 <input
                   type="password"
-                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="ui-input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -506,7 +499,7 @@ const RegisterPage: React.FC = () => {
                 </label>
                 <input
                   type="password"
-                  className="w-full rounded-xl border border-emerald-100/80 bg-white/70 px-3 py-2 text-sm shadow-sm shadow-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="ui-input"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -536,14 +529,7 @@ const RegisterPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="
-                mt-1 w-full rounded-full
-                bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white
-                shadow-sm shadow-emerald-400/70
-                hover:bg-emerald-700
-                disabled:opacity-60 disabled:cursor-not-allowed
-                transition
-              "
+              className="btn-primary mt-1 w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Creating account..." : "Register with Prakriti.AI"}
             </button>

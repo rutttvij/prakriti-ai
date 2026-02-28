@@ -10,6 +10,8 @@ from app.core.database import Base
 class UserRole(str, enum.Enum):
     CITIZEN = "CITIZEN"
     BULK_GENERATOR = "BULK_GENERATOR"
+    BULK_MANAGER = "BULK_MANAGER"
+    BULK_STAFF = "BULK_STAFF"
     WASTE_WORKER = "WASTE_WORKER"
     SUPER_ADMIN = "SUPER_ADMIN"
 

@@ -1,11 +1,12 @@
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 
 /* Public Pages */
-import { LandingPage } from "./pages/LandingPage";
-import { AboutPage } from "./pages/AboutPage";
+import LandingPage from "./pages/Landing";
+import DocsPage from "./pages/Docs";
+import AboutPage from "./pages/About";
 import { ContactPage } from "./pages/ContactPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
+import LoginRoute from "./pages/auth/Login";
+import RegisterRoute from "./pages/auth/Register";
 
 /* Citizen Pages */
 import CitizenDashboardPage from "./pages/citizen/CitizenDashboardPage";
@@ -28,16 +29,19 @@ import { WorkerAvailableReportsPage } from "./pages/worker/WorkerAvailableReport
 import { WorkerMyReportsPage } from "./pages/worker/WorkerMyReportsPage";
 import WorkerSegregationPage from "./pages/worker/WorkerSegregationPage";
 import WorkerRouteMapPage from "./pages/worker/WorkerRouteMapPage";
+import BulkLayout from "./layouts/BulkLayout";
+import BulkDashboardPage from "./pages/bulk/BulkDashboardPage";
+import BulkWasteLogPage from "./pages/bulk/BulkWasteLogPage";
+import BulkPickupRequestsPage from "./pages/bulk/BulkPickupRequestsPage";
+import BulkTrainingPage from "./pages/bulk/BulkTrainingPage";
+import BulkInsightsPage from "./pages/bulk/BulkInsightsPage";
+import AppDashboard from "./pages/app/Dashboard";
 
 /* Layout & Auth */
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import CitizenLayout from "./layouts/CitizenLayout";
 import AdminLayout from "./layouts/AdminLayout";
-
-/* Global Layout Components */
-import { Navbar } from "./components/Navbar";
-import { Footer } from "./components/Footer";
-import { BackToTopButton } from "./components/BackToTopButton";
+import { useAuth } from "./contexts/AuthContext";
 
 const AdminPccParamRedirect: React.FC = () => {
   const { logId } = useParams();
@@ -46,28 +50,106 @@ const AdminPccParamRedirect: React.FC = () => {
   return <Navigate to={`/admin/pcc?logId=${n}`} replace />;
 };
 
+const DashboardRedirect: React.FC = () => {
+  const { user } = useAuth();
+  const role = user?.role;
+
+  if (role === "SUPER_ADMIN") return <Navigate to="/admin" replace />;
+  if (role === "WASTE_WORKER") return <Navigate to="/worker/dashboard" replace />;
+  if (role === "BULK_GENERATOR" || role === "BULK_MANAGER" || role === "BULK_STAFF") {
+    return <Navigate to="/bulk/dashboard" replace />;
+  }
+
+  return (
+    <CitizenLayout>
+      <CitizenDashboardPage />
+    </CitizenLayout>
+  );
+};
+
 function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-emerald-50/70 to-white">
-      <Navbar />
-
-      <main className="flex-1">
-        <Routes>
+    <div className="min-h-screen">
+      <Routes>
           {/* ---------- PUBLIC ROUTES ---------- */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/docs" element={<DocsPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/login" element={<LoginRoute />} />
+          <Route path="/auth/register" element={<RegisterRoute />} />
+          <Route path="/login" element={<Navigate to="/auth/login" replace />} />
+          <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+          <Route
+            path="/app/dashboard"
+            element={
+              <ProtectedRoute>
+                <AppDashboard />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ---------- CITIZEN ROUTES ---------- */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <CitizenLayout>
-                  <CitizenDashboardPage />
-                </CitizenLayout>
+                <DashboardRedirect />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/bulk/dashboard"
+            element={
+              <ProtectedRoute>
+                <BulkLayout>
+                  <BulkDashboardPage />
+                </BulkLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/bulk/waste-log"
+            element={
+              <ProtectedRoute>
+                <BulkLayout>
+                  <BulkWasteLogPage />
+                </BulkLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/bulk/pickups"
+            element={
+              <ProtectedRoute>
+                <BulkLayout>
+                  <BulkPickupRequestsPage />
+                </BulkLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/bulk/training"
+            element={
+              <ProtectedRoute>
+                <BulkLayout>
+                  <BulkTrainingPage />
+                </BulkLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/bulk/insights"
+            element={
+              <ProtectedRoute>
+                <BulkLayout>
+                  <BulkInsightsPage />
+                </BulkLayout>
               </ProtectedRoute>
             }
           />
@@ -237,11 +319,7 @@ function App() {
 
           {/* ---------- FALLBACK ---------- */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-
-      <Footer />
-      <BackToTopButton />
+      </Routes>
     </div>
   );
 }

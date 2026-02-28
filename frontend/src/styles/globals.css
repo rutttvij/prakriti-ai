@@ -1,0 +1,52 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
+
+:root {
+  --aurora-ink: #081722;
+  --aurora-deep: #102635;
+  --aurora-emerald: #1f5f52;
+  --aurora-teal: #1f7b74;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+}
+
+body {
+  font-family: "Manrope", sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Sora", "Manrope", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.landing-aurora {
+  position: relative;
+  background:
+    radial-gradient(circle at 9% 8%, rgba(67, 157, 145, 0.26), transparent 32%),
+    radial-gradient(circle at 78% 20%, rgba(71, 189, 162, 0.24), transparent 36%),
+    radial-gradient(circle at 50% 55%, rgba(145, 214, 191, 0.1), transparent 42%),
+    linear-gradient(140deg, var(--aurora-ink) 0%, var(--aurora-deep) 42%, #123842 70%, #1d4c45 100%);
+}
+
+.landing-aurora::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.6) 0.5px, transparent 0.5px);
+  background-size: 3px 3px;
+  mix-blend-mode: soft-light;
+}
+
+.section-block {
+  scroll-margin-top: 88px;
+}

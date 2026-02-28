@@ -1,7 +1,7 @@
 # app/schemas/user.py
 
 from enum import Enum
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, EmailStr, Field, constr
 
@@ -9,6 +9,8 @@ from pydantic import BaseModel, EmailStr, Field, constr
 class UserRole(str, Enum):
     CITIZEN = "CITIZEN"
     BULK_GENERATOR = "BULK_GENERATOR"
+    BULK_MANAGER = "BULK_MANAGER"
+    BULK_STAFF = "BULK_STAFF"
     WASTE_WORKER = "WASTE_WORKER"
     SUPER_ADMIN = "SUPER_ADMIN"
 
@@ -36,7 +38,7 @@ class UserCreate(BaseModel):
     )  # type: ignore
 
     # Role-specific data
-    meta: Dict[str, str] = Field(default_factory=dict)
+    meta: Dict[str, Any] = Field(default_factory=dict)
 
     password: str
 
@@ -55,7 +57,7 @@ class UserRead(BaseModel):
     government_id: Optional[str] = None
     pincode: Optional[str] = None
 
-    meta: Dict[str, str] = Field(default_factory=dict)
+    meta: Dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         from_attributes = True  # SQLAlchemy ORM → Pydantic

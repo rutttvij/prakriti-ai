@@ -3,8 +3,8 @@ import {
   useContext,
   useEffect,
   useState,
-  ReactNode,
 } from "react";
+import type { ReactNode } from "react";
 import api from "../lib/api";
 import type { User } from "../types/user";
 

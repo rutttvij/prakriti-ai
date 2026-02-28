@@ -1,0 +1,82 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS emission_factors (
+  id SERIAL PRIMARY KEY,
+  category VARCHAR(64) UNIQUE NOT NULL,
+  kgco2e_per_kg DOUBLE PRECISION NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS carbon_ledger (
+  id SERIAL PRIMARY KEY,
+  ref_type VARCHAR(64) NOT NULL,
+  ref_id INTEGER NOT NULL,
+  user_id INTEGER NULL,
+  org_id INTEGER NULL,
+  carbon_saved_kgco2e DOUBLE PRECISION NOT NULL,
+  pcc_awarded DOUBLE PRECISION NOT NULL,
+  quality_score DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_carbon_ledger_ref ON carbon_ledger(ref_type, ref_id);
+CREATE INDEX IF NOT EXISTS ix_carbon_ledger_user_id ON carbon_ledger(user_id);
+CREATE INDEX IF NOT EXISTS ix_carbon_ledger_org_id ON carbon_ledger(org_id);
+
+ALTER TABLE waste_logs ADD COLUMN IF NOT EXISTS user_id INTEGER NULL;
+ALTER TABLE waste_logs ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;
+ALTER TABLE waste_logs ADD COLUMN IF NOT EXISTS logged_weight DOUBLE PRECISION NULL;
+ALTER TABLE waste_logs ADD COLUMN IF NOT EXISTS image_url VARCHAR(500) NULL;
+
+ALTER TABLE verifications ADD COLUMN IF NOT EXISTS verifier_id INTEGER NULL;
+ALTER TABLE verifications ADD COLUMN IF NOT EXISTS verified_weight DOUBLE PRECISION NULL;
+ALTER TABLE verifications ADD COLUMN IF NOT EXISTS contamination_rate DOUBLE PRECISION NULL;
+ALTER TABLE verifications ADD COLUMN IF NOT EXISTS quality_score DOUBLE PRECISION NOT NULL DEFAULT 1.0;
+ALTER TABLE verifications ADD COLUMN IF NOT EXISTS evidence_url VARCHAR(500) NULL;
+
+ALTER TABLE wallets ADD COLUMN IF NOT EXISTS user_id INTEGER NULL;
+ALTER TABLE wallets ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;
+ALTER TABLE wallets ADD COLUMN IF NOT EXISTS balance_pcc DOUBLE PRECISION NOT NULL DEFAULT 0.0;
+
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS type VARCHAR(20) NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS amount_pcc DOUBLE PRECISION NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS reason VARCHAR(500) NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS ref_type VARCHAR(50) NULL;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS ref_id INTEGER NULL;
+
+ALTER TABLE badges ADD COLUMN IF NOT EXISTS code VARCHAR(120) NULL;
+ALTER TABLE badges ADD COLUMN IF NOT EXISTS threshold DOUBLE PRECISION NULL;
+ALTER TABLE badges ADD COLUMN IF NOT EXISTS rule_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE badges ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'uq_badges_code'
+  ) THEN
+    ALTER TABLE badges ADD CONSTRAINT uq_badges_code UNIQUE (code);
+  END IF;
+END$$;
+
+ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;
+ALTER TABLE user_badges ADD COLUMN IF NOT EXISTS metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+INSERT INTO emission_factors (category, kgco2e_per_kg, active)
+VALUES
+  ('plastic', 2.5, TRUE),
+  ('paper', 1.8, TRUE),
+  ('glass', 0.6, TRUE),
+  ('metal', 4.0, TRUE),
+  ('organic', 1.2, TRUE),
+  ('ewaste', 3.5, TRUE)
+ON CONFLICT (category) DO UPDATE
+SET kgco2e_per_kg = EXCLUDED.kgco2e_per_kg,
+    active = EXCLUDED.active,
+    updated_at = NOW();
+
+COMMIT;

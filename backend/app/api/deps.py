@@ -45,3 +45,16 @@ def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="Super Admin privileges required",
         )
     return current_user
+
+
+def require_roles(*roles: UserRole):
+    def _checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in roles:
+            role_values = ", ".join(r.value for r in roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permission denied. Required role(s): {role_values}",
+            )
+        return current_user
+
+    return _checker

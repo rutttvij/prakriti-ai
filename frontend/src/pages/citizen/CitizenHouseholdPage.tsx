@@ -64,14 +64,6 @@ export default function CitizenHouseholdPage() {
     [households]
   );
 
-  const selectedHousehold = useMemo(
-    () =>
-      typeof selectedId === "number"
-        ? households.find((h) => h.id === selectedId) ?? null
-        : null,
-    [households, selectedId]
-  );
-
   async function loadHouseholds() {
     try {
       setLoading(true);

@@ -7,6 +7,29 @@ from app.models.facility import Facility
 from app.models.carbon import CarbonActivity
 from app.models.token import TokenAccount, TokenTransaction, TokenBlock
 from app.models.contact import ContactMessage  # new
+from app.models.marketing import (
+    MarketingPartner,
+    MarketingTestimonial,
+    MarketingCaseStudy,
+    MarketingFAQ,
+    MarketingConfig,
+)
+from app.models.leads import Lead, NewsletterSubscriber
+from app.models.bulk import (
+    BulkGenerator,
+    WasteLog,
+    PickupRequest,
+    Verification,
+    Wallet,
+    Transaction,
+    BulkApprovalStatus,
+    WasteLogCategory,
+    WasteLogStatus,
+    PickupRequestStatus,
+    TransactionType,
+    TransactionStatus,
+)
+from app.models.pcc import EmissionFactor, CarbonLedger
 
 
 __all__ = [
@@ -24,4 +47,25 @@ __all__ = [
     "TokenAccount",
     "TokenTransaction",
     "TokenBlock",
+    "BulkGenerator",
+    "WasteLog",
+    "PickupRequest",
+    "Verification",
+    "Wallet",
+    "Transaction",
+    "BulkApprovalStatus",
+    "WasteLogCategory",
+    "WasteLogStatus",
+    "PickupRequestStatus",
+    "TransactionType",
+    "TransactionStatus",
+    "EmissionFactor",
+    "CarbonLedger",
+    "MarketingPartner",
+    "MarketingTestimonial",
+    "MarketingCaseStudy",
+    "MarketingFAQ",
+    "MarketingConfig",
+    "Lead",
+    "NewsletterSubscriber",
 ]

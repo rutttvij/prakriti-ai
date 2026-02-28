@@ -25,7 +25,6 @@ type UserProfile = {
 
 export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const [form, setForm] = useState<UserProfile>({});
   const [loading, setLoading] = useState(false);
@@ -48,8 +47,6 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
       try {
         const res = await api.get("/auth/me");
         const data = res.data;
-
-        setProfile(data);
 
         const meta = data.meta || {};
 
@@ -139,11 +136,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
       onClick={onClose}
     >
       <div
-        className="
-          max-h-[90vh] w-full max-w-lg overflow-hidden
-          rounded-[1.75rem] border border-emerald-100/80
-          bg-white/85 shadow-2xl shadow-emerald-200/80 backdrop-blur-xl
-        "
+        className="surface-card-strong max-h-[90vh] w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -156,10 +149,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
               Review your registered details and update personal information.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50"
-          >
+          <button onClick={onClose} className="btn-secondary px-3 py-1 text-xs">
             Close
           </button>
         </div>
@@ -202,7 +192,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                     type="text"
                     value={form.full_name ?? ""}
                     onChange={(e) => handleChange("full_name", e.target.value)}
-                    className="w-full rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    className="ui-input"
                   />
                 </div>
 
@@ -215,7 +205,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                     type="text"
                     value={form.phone ?? ""}
                     onChange={(e) => handleChange("phone", e.target.value)}
-                    className="w-full rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    className="ui-input"
                   />
                 </div>
 
@@ -228,7 +218,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                     type="text"
                     value={form.pincode ?? ""}
                     onChange={(e) => handleChange("pincode", e.target.value)}
-                    className="w-full rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    className="ui-input"
                   />
                 </div>
 
@@ -241,7 +231,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                     type="text"
                     value={form.ward ?? ""}
                     onChange={(e) => handleChange("ward", e.target.value)}
-                    className="w-full rounded-xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    className="ui-input"
                   />
                 </div>
 
@@ -254,7 +244,7 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
                     rows={2}
                     value={form.address ?? ""}
                     onChange={(e) => handleChange("address", e.target.value)}
-                    className="w-full rounded-2xl border border-emerald-100 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    className="ui-input min-h-[84px]"
                   />
                 </div>
 
@@ -297,17 +287,14 @@ export const UserProfileModal: React.FC<Props> = ({ open, onClose }) => {
 
         {/* Footer */}
         <div className="flex justify-end gap-3 border-t border-emerald-50/80 bg-white/70 px-6 py-3 backdrop-blur-md">
-          <button
-            onClick={onClose}
-            className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-600"
-          >
+          <button onClick={onClose} className="btn-secondary px-4 py-1.5 text-xs font-medium">
             Cancel
           </button>
 
           <button
             onClick={handleSave}
             disabled={saving || loading}
-            className="rounded-full bg-emerald-700 px-5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-800 disabled:opacity-50"
+            className="btn-primary px-5 py-1.5 text-xs disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save changes"}
           </button>

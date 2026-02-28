@@ -1,6 +1,8 @@
 export type UserRole =
   | "CITIZEN"
   | "BULK_GENERATOR"
+  | "BULK_MANAGER"
+  | "BULK_STAFF"
   | "WASTE_WORKER"
   | "SUPER_ADMIN";
 

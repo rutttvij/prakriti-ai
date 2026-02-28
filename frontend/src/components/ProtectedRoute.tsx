@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useAuthGuard } from "../hooks/useAuthGuard";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -6,7 +6,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
+      <div className="landing-aurora min-h-screen flex items-center justify-center text-emerald-50/90">
         Loading...
       </div>
     );

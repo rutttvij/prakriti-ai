@@ -1,21 +1,14 @@
 // src/pages/AboutPage.tsx
+import { Navbar } from "../components/Navbar";
+
 export const AboutPage: React.FC = () => {
   return (
-    <main className="relative">
-      {/* Soft glow behind the card */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
+    <main className="public-shell landing-aurora">
+      <Navbar />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,_rgba(106,201,166,0.28),_transparent_65%)] opacity-90" />
 
-      <section className="relative mx-auto max-w-4xl px-4 pt-16 pb-20">
-        <div
-          className="
-            rounded-3xl
-            border border-emerald-100/80
-            bg-white/80
-            px-6 py-7 sm:px-8 sm:py-9
-            shadow-lg shadow-emerald-100/70
-            backdrop-blur-md
-          "
-        >
+      <section className="relative mx-auto max-w-4xl px-4 pb-20 pt-8">
+        <div className="surface-card-strong px-6 py-7 sm:px-8 sm:py-9">
           <h1 className="mb-3 text-2xl font-bold text-slate-900">
             About Prakriti.AI
           </h1>

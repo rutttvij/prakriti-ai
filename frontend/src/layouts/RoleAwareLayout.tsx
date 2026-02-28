@@ -1,5 +1,5 @@
 // src/layouts/RoleAwareLayout.tsx
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import CitizenLayout from "./CitizenLayout";
 import BulkLayout from "./BulkLayout";

@@ -1,6 +1,7 @@
 // src/pages/ContactPage.tsx
 import { type FormEvent, useState } from "react";
 import { submitContactMessage } from "../lib/api";
+import { Navbar } from "../components/Navbar";
 
 export const ContactPage: React.FC = () => {
   const [status, setStatus] = useState<"idle" | "submitted" | "error">("idle");
@@ -30,21 +31,12 @@ export const ContactPage: React.FC = () => {
   };
 
   return (
-    <main className="relative">
-      {/* Soft glow behind card */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
+    <main className="public-shell landing-aurora">
+      <Navbar />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,_rgba(106,201,166,0.28),_transparent_65%)] opacity-90" />
 
-      <section className="relative mx-auto max-w-4xl px-4 pt-16 pb-20">
-        <div
-          className="
-            rounded-3xl
-            border border-emerald-100/80
-            bg-white/80
-            px-6 py-7 sm:px-8 sm:py-9
-            shadow-lg shadow-emerald-100/70
-            backdrop-blur-md
-          "
-        >
+      <section className="relative mx-auto max-w-4xl px-4 pb-20 pt-8">
+        <div className="surface-card-strong px-6 py-7 sm:px-8 sm:py-9">
           <h1 className="text-2xl font-bold text-slate-900 mb-3">
             Contact Us
           </h1>
@@ -74,14 +66,7 @@ export const ContactPage: React.FC = () => {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="
-                    w-full rounded-xl
-                    border border-emerald-100/80
-                    bg-white/70
-                    px-3 py-2.5 text-sm
-                    shadow-sm shadow-emerald-50
-                    focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
-                  "
+                  className="ui-input"
                 />
               </div>
 
@@ -94,14 +79,7 @@ export const ContactPage: React.FC = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="
-                    w-full rounded-xl
-                    border border-emerald-100/80
-                    bg-white/70
-                    px-3 py-2.5 text-sm
-                    shadow-sm shadow-emerald-50
-                    focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
-                  "
+                  className="ui-input"
                 />
               </div>
             </div>
@@ -115,14 +93,7 @@ export const ContactPage: React.FC = () => {
                 rows={4}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="
-                  w-full rounded-2xl
-                  border border-emerald-100/80
-                  bg-white/70
-                  px-3 py-2.5 text-sm
-                  shadow-sm shadow-emerald-50
-                  focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
-                "
+                className="ui-input min-h-28"
               />
             </div>
 
@@ -130,15 +101,7 @@ export const ContactPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="
-                  inline-flex items-center justify-center
-                  rounded-full bg-emerald-700
-                  px-6 py-2.5 text-sm font-semibold text-white
-                  shadow-sm shadow-emerald-400/60
-                  hover:bg-emerald-800
-                  transition
-                  disabled:opacity-60 disabled:cursor-not-allowed
-                "
+                className="btn-primary px-6 py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Sending..." : "Send message"}
               </button>

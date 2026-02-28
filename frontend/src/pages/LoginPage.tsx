@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../lib/api";
+import logo from "../assets/logo.png";
 
 type UserRole =
   | "CITIZEN"
@@ -122,8 +123,12 @@ export default function LoginPage() {
             Civic Intelligence Platform
           </p>
           <div className="mb-6 flex flex-col items-center text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-xl font-bold text-white shadow-md shadow-emerald-300/60">
-              ♻️
+            <div className="h-12 w-12 overflow-hidden rounded-2xl shadow-md shadow-emerald-300/60">
+              <img
+                src={logo}
+                alt="Prakriti.AI logo"
+                className="h-full w-full scale-[1.28] object-cover object-center"
+              />
             </div>
             <h1 className="mt-4 text-2xl font-bold tracking-[0.18em] text-slate-900 uppercase">
               Prakriti

@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 type Role = "CITIZEN" | "WASTE_WORKER" | "BULK_GENERATOR";
 
@@ -356,6 +357,15 @@ const RegisterPage: React.FC = () => {
           <p className="mb-3 text-center text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-emerald-700 lg:hidden">
             Civic Intelligence Platform
           </p>
+          <div className="mb-4 flex items-center justify-center">
+            <div className="h-12 w-12 overflow-hidden rounded-2xl shadow-md shadow-emerald-300/60">
+              <img
+                src={logo}
+                alt="Prakriti.AI logo"
+                className="h-full w-full scale-[1.28] object-cover object-center"
+              />
+            </div>
+          </div>
           {/* Role pills */}
           <div className="mb-4 flex flex-wrap gap-2">
             {(["CITIZEN", "WASTE_WORKER", "BULK_GENERATOR"] as Role[]).map(

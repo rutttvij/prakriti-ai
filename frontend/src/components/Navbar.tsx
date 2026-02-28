@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { UserProfileModal } from "./UserProfileModal";
+import logo from "../assets/logo.png";
 
 function classNames(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -76,8 +77,12 @@ export const Navbar: React.FC = () => {
         <div className="mx-auto max-w-7xl rounded-[1.35rem] border border-white/30 bg-gradient-to-r from-slate-900/72 via-teal-950/60 to-emerald-950/55 px-4 py-3 shadow-[0_18px_34px_rgba(3,17,14,0.42)] backdrop-blur-2xl sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <button onClick={() => navigate("/")} className="flex items-center gap-3 text-left">
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-lg font-bold text-white shadow-md shadow-emerald-900/25">
-                P
+              <div className="h-11 w-11 overflow-hidden rounded-xl shadow-md shadow-emerald-900/25">
+                <img
+                  src={logo}
+                  alt="Prakriti.AI logo"
+                  className="h-full w-full scale-[1.28] object-cover object-center"
+                />
               </div>
               <div>
                 <p className="text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-emerald-100/80">Civic Intelligence</p>

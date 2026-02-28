@@ -1,11 +1,21 @@
 import { Link } from "react-router-dom";
+import logo from "../assets/logo.png";
 
 export const Footer: React.FC = () => {
   return (
     <footer className="mt-12 border-t border-emerald-200/20 bg-gradient-to-r from-[#1a3a30] via-[#21483b] to-[#224f3f] pb-10 pt-12 text-emerald-50 shadow-[0_-14px_34px_rgba(3,18,14,0.36)]">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 md:grid-cols-4">
         <div className="md:col-span-2">
-          <h2 className="text-xl font-bold tracking-[0.07em] text-white">PRAKRITI.AI</h2>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 overflow-hidden rounded-xl shadow-md shadow-emerald-950/30">
+              <img
+                src={logo}
+                alt="Prakriti.AI logo"
+                className="h-full w-full scale-[1.28] object-cover object-center"
+              />
+            </div>
+            <h2 className="text-xl font-bold tracking-[0.07em] text-white">PRAKRITI.AI</h2>
+          </div>
           <p className="mt-3 max-w-lg text-sm leading-relaxed text-emerald-100/90">
             Enterprise-grade waste intelligence for cities, campuses, and commercial ecosystems. Built for accountability, climate impact, and operational speed.
           </p>

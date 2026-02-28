@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import logo from "../../assets/logo.png";
 
 import { subscribeNewsletter } from "../../lib/api";
 import { useToast } from "../ui/Toast";
@@ -27,7 +28,16 @@ export function Footer() {
     <footer className="border-t border-emerald-200/20 bg-gradient-to-r from-[#0f2331] via-[#133942] to-[#1d4e47] pb-12 pt-12 text-emerald-50">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 md:grid-cols-4">
         <div className="md:col-span-2">
-          <h2 className="text-xl font-bold tracking-[0.07em] text-white">PRAKRITI.AI</h2>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 overflow-hidden rounded-xl shadow-md shadow-emerald-950/30">
+              <img
+                src={logo}
+                alt="Prakriti.AI logo"
+                className="h-full w-full scale-[1.28] object-cover object-center"
+              />
+            </div>
+            <h2 className="text-xl font-bold tracking-[0.07em] text-white">PRAKRITI.AI</h2>
+          </div>
           <p className="mt-3 max-w-lg text-sm leading-relaxed text-emerald-100/85">
             Enterprise-grade waste intelligence for cities, campuses, and commercial ecosystems.
           </p>

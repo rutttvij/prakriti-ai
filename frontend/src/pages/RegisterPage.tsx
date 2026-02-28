@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 type Role = "CITIZEN" | "WASTE_WORKER" | "BULK_GENERATOR";
 
@@ -302,96 +302,60 @@ const RegisterPage: React.FC = () => {
       : "Bulk Generator";
 
   return (
-    <main
-      className="
-       relative flex-1 flex items-center landing-aurora
-       overflow-hidden
-      "
-    >
-      {/* Background glows */}
-      <div className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-80" />
-      <div className="pointer-events-none absolute -right-40 top-40 h-64 w-64 rounded-full bg-emerald-200/60 blur-3xl" />
-      <div className="pointer-events-none absolute -left-40 bottom-0 h-64 w-64 rounded-full bg-emerald-100/70 blur-3xl" />
+    <main className="relative min-h-screen flex items-center landing-aurora overflow-hidden px-4 py-10 sm:px-6">
+      <div className="pointer-events-none absolute left-[12%] top-[8%] h-80 w-80 rounded-full bg-emerald-200/28 blur-[130px]" />
+      <div className="pointer-events-none absolute right-[10%] top-[12%] h-72 w-72 rounded-full bg-cyan-200/22 blur-[125px]" />
+      <div className="pointer-events-none absolute left-[28%] bottom-[8%] h-72 w-72 rounded-full bg-emerald-300/14 blur-[130px]" />
 
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12 md:flex-row md:items-stretch">
-        {/* Left: pitch + role explainer */}
-        <section className="md:w-1/2 space-y-5">
-          <div className="inline-flex items-center rounded-full bg-emerald-50/80 px-3 py-1 text-[0.7rem] font-semibold text-emerald-800 border border-emerald-100 shadow-sm shadow-emerald-100/80">
-            Join Prakriti.AI
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 leading-snug">
-            Create your{" "}
-            <span className="bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
-              Prakriti.AI
-            </span>{" "}
-            account.
-          </h1>
-          <p className="text-sm text-slate-700 max-w-md">
-            Register as a Citizen, Waste Worker, or Bulk Generator. Your account
-            will be activated after verification by the city admin — keeping the
-            platform trusted and clean.
-          </p>
+      <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="hidden lg:block">
+          <div className="rounded-[2rem] border border-white/20 bg-slate-950/26 p-8 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+            <div className="inline-flex items-center rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.72rem] font-semibold text-emerald-100">
+              Join Prakriti.AI
+            </div>
+            <h1 className="mt-5 text-5xl font-extrabold leading-[0.95] text-white">
+              Create your Prakriti.AI
+              <br />
+              account.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-[#dffaf0]">
+              Register as a Citizen, Waste Worker, or Bulk Generator. Your account
+              is activated after city-admin verification for accountable civic operations.
+            </p>
 
-          <div
-            className="
-              mt-4 grid gap-3 text-xs text-slate-800
-              surface-card p-4
-            "
-          >
-            <div className="flex gap-3">
-              <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs shadow-sm shadow-emerald-200/80">
-                👤
-              </span>
-              <div>
-                <p className="font-semibold text-slate-900">Citizens</p>
-                <p className="text-[0.7rem] text-slate-600">
-                  Report local waste issues, track resolutions, and earn PCC for
-                  climate-positive behaviour.
+            <div className="mt-6 grid gap-3 text-xs text-emerald-50/92">
+              <div className="rounded-2xl border border-white/28 bg-white/12 p-3">
+                <p className="font-semibold text-emerald-100">Citizens</p>
+                <p className="mt-1 text-[0.75rem] text-[#dffaf0]">
+                  Report local waste issues, track resolution, and earn climate-linked rewards.
                 </p>
               </div>
-            </div>
-
-            <div className="flex gap-3">
-              <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs shadow-sm shadow-emerald-200/80">
-                🧹
-              </span>
-              <div>
-                <p className="font-semibold text-slate-900">Waste Workers</p>
-                <p className="text-[0.7rem] text-slate-600">
-                  Claim nearby jobs, update status from the field, and close
-                  reports with photo proof.
+              <div className="rounded-2xl border border-white/28 bg-white/12 p-3">
+                <p className="font-semibold text-emerald-100">Waste Workers</p>
+                <p className="mt-1 text-[0.75rem] text-[#dffaf0]">
+                  Claim jobs, update field status, and close reports with proof-backed workflow.
                 </p>
               </div>
-            </div>
-
-            <div className="flex gap-3">
-              <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs shadow-sm shadow-emerald-200/80">
-                🏢
-              </span>
-              <div>
-                <p className="font-semibold text-slate-900">Bulk Generators</p>
-                <p className="text-[0.7rem] text-slate-600">
-                  Log segregation from societies, campuses and offices, and get
-                  ready-made climate reports.
+              <div className="rounded-2xl border border-white/28 bg-white/12 p-3">
+                <p className="font-semibold text-emerald-100">Bulk Generators</p>
+                <p className="mt-1 text-[0.75rem] text-[#dffaf0]">
+                  Log segregation from campuses, societies, and enterprises with audit-ready insights.
                 </p>
               </div>
             </div>
           </div>
-
-          <p className="text-[0.7rem] text-slate-500 max-w-md">
-            By creating an account, you agree that your details may be used by
-            the city administration to verify your role and track waste
-            activity.
-          </p>
         </section>
 
         {/* Right: glassy registration form */}
         <section
           className="
-            md:w-1/2
-            surface-card-strong p-5 sm:p-6
+            surface-card-strong mx-auto w-full max-w-2xl p-5 sm:p-6
+            max-h-[88vh] overflow-y-auto
           "
         >
+          <p className="mb-3 text-center text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-emerald-700 lg:hidden">
+            Civic Intelligence Platform
+          </p>
           {/* Role pills */}
           <div className="mb-4 flex flex-wrap gap-2">
             {(["CITIZEN", "WASTE_WORKER", "BULK_GENERATOR"] as Role[]).map(
@@ -534,6 +498,13 @@ const RegisterPage: React.FC = () => {
               {submitting ? "Creating account..." : "Register with Prakriti.AI"}
             </button>
           </form>
+
+          <p className="mt-3 text-center text-xs text-slate-600">
+            Already registered?{" "}
+            <Link to="/auth/login" className="font-semibold text-emerald-700 hover:text-emerald-800">
+              Sign in
+            </Link>
+          </p>
         </section>
       </div>
     </main>

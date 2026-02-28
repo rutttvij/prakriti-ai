@@ -52,6 +52,7 @@ export default function Landing() {
   const [faqs, setFaqs] = useState<FAQItem[]>(fallbackFaqs);
   const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
   const [config, setConfig] = useState<OrgTypeCopy>(fallbackConfig.org_type_copy);
+  const [trendValues, setTrendValues] = useState<number[]>([]);
 
   const [role, setRole] = useState<RoleKey>("city");
   const [requestDemoOpen, setRequestDemoOpen] = useState(false);
@@ -68,26 +69,58 @@ export default function Landing() {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const [s, p, t, c, f, l, cfg] = await Promise.all([
-          fetchPublicStats(),
-          fetchPublicPartners(),
-          fetchPublicTestimonials(),
-          fetchPublicCaseStudies(),
-          fetchPublicFAQs(),
-          fetchSampleLedger(),
-          fetchPublicConfig(),
-        ]);
+      const [s, p, t, c, f, l, cfg] = await Promise.allSettled([
+        fetchPublicStats(),
+        fetchPublicPartners(),
+        fetchPublicTestimonials(),
+        fetchPublicCaseStudies(),
+        fetchPublicFAQs(),
+        fetchSampleLedger(),
+        fetchPublicConfig(),
+      ]);
 
-        setStats(s || fallbackStats);
-        setPartners(p?.length ? p : fallbackPartners);
-        setTestimonials(t?.length ? t : fallbackTestimonials);
-        setCaseStudies(c?.length ? c : fallbackCaseStudies);
-        setFaqs(f?.length ? f : fallbackFaqs);
-        setLedgerRows(l?.length ? l : []);
-        setConfig(Object.keys(cfg?.org_type_copy || {}).length ? cfg.org_type_copy : fallbackConfig.org_type_copy);
-      } catch {
-        push("error", "Could not load some live data. Showing fallback content.");
+      let hasFailure = false;
+
+      if (s.status === "fulfilled" && s.value) setStats(s.value);
+      else hasFailure = true;
+
+      if (p.status === "fulfilled" && p.value?.length) setPartners(p.value);
+      else hasFailure = true;
+
+      if (t.status === "fulfilled" && t.value?.length) setTestimonials(t.value);
+      else hasFailure = true;
+
+      if (c.status === "fulfilled" && c.value?.length) setCaseStudies(c.value);
+      else hasFailure = true;
+
+      if (f.status === "fulfilled" && f.value?.length) setFaqs(f.value);
+      else hasFailure = true;
+
+      if (l.status === "fulfilled" && Array.isArray(l.value)) {
+        setLedgerRows(l.value);
+        if (l.value.length > 0) {
+          const derived = l.value
+            .map((row) =>
+              Number.isFinite(row.quality_score)
+                ? Math.round(row.quality_score * 100)
+                : Math.round(row.carbon_saved_kgco2e)
+            )
+            .slice(0, 14)
+            .reverse();
+          setTrendValues(derived);
+        }
+      } else {
+        hasFailure = true;
+      }
+
+      if (cfg.status === "fulfilled" && Object.keys(cfg.value?.org_type_copy || {}).length) {
+        setConfig(cfg.value.org_type_copy);
+      } else {
+        hasFailure = true;
+      }
+
+      if (hasFailure) {
+        push("error", "Some live sections are unavailable. Showing fallback data where needed.");
       }
     };
     void load();
@@ -132,6 +165,7 @@ export default function Landing() {
         rolesConfig={config}
         roleCopy={roleCopy}
         stats={stats}
+        trendValues={trendValues}
         onRequestDemo={() => setRequestDemoOpen(true)}
         onSeeWorkflow={onWorkflow}
       />

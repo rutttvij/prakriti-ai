@@ -6,15 +6,28 @@ function card(value: string, label: string) {
   return { value, label };
 }
 
+function formatCompact(value: number): string {
+  const n = Number(value || 0);
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `${Math.round(n / 1000)}K`;
+  return `${Math.round(n)}`;
+}
+
+function formatCarbon(value: number): string {
+  const n = Number(value || 0);
+  if (n >= 1000) return `${formatCompact(n)} kg`;
+  return `${n.toFixed(n % 1 === 0 ? 0 : 1)} kg`;
+}
+
 export function MetricsRow({ stats, labels }: { stats: PublicStats; labels?: string[] }) {
   const defaultLabels = ["Resolved Incidents", "CO2e Avoided", "Verified Actions", "PCC Issued"];
   const useLabels = labels && labels.length >= 4 ? labels : defaultLabels;
 
   const items = [
-    card(`${Math.round(stats.total_waste_logs / 1000)}K+`, useLabels[0]),
-    card(`${stats.total_carbon_saved.toLocaleString()} kg`, useLabels[1]),
-    card(`${stats.total_verified_actions.toLocaleString()}`, useLabels[2]),
-    card(`${Math.round(stats.total_pcc_issued).toLocaleString()}`, useLabels[3]),
+    card(formatCompact(stats.total_waste_logs), useLabels[0]),
+    card(formatCarbon(stats.total_carbon_saved), useLabels[1]),
+    card(formatCompact(stats.total_verified_actions), useLabels[2]),
+    card(formatCompact(stats.total_pcc_issued), useLabels[3]),
   ];
 
   return (

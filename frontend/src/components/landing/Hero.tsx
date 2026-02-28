@@ -12,6 +12,7 @@ export function Hero({
   rolesConfig,
   roleCopy,
   stats,
+  trendValues,
   onRequestDemo,
   onSeeWorkflow,
 }: {
@@ -20,6 +21,7 @@ export function Hero({
   rolesConfig: OrgTypeCopy;
   roleCopy: { headline: string; subheadline: string; bullets?: string[]; snapshot_focus?: string; metric_labels?: string[] };
   stats: PublicStats;
+  trendValues?: number[];
   onRequestDemo: () => void;
   onSeeWorkflow: () => void;
 }) {
@@ -40,7 +42,7 @@ export function Hero({
             {roleCopy.headline}
           </motion.h1>
 
-          <motion.p {...childLift} className="max-w-xl text-base leading-relaxed text-emerald-50/92 sm:text-lg">
+          <motion.p {...childLift} className="max-w-xl text-base leading-relaxed text-[#dffaf0] sm:text-lg">
             {roleCopy.subheadline}
           </motion.p>
 
@@ -68,7 +70,11 @@ export function Hero({
         </motion.div>
 
         <motion.div {...fadeLift}>
-          <LiveOpsSnapshot stats={stats} focus={roleCopy.snapshot_focus || "SLA and verification confidence"} />
+          <LiveOpsSnapshot
+            stats={stats}
+            focus={roleCopy.snapshot_focus || "SLA and verification confidence"}
+            trendValues={trendValues}
+          />
         </motion.div>
       </div>
     </section>

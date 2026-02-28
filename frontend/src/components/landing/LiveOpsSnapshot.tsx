@@ -27,10 +27,19 @@ function AnimatedNumber({ value, suffix = "" }: { value: number; suffix?: string
 export function LiveOpsSnapshot({
   stats,
   focus,
+  trendValues,
 }: {
   stats: PublicStats;
   focus: string;
+  trendValues?: number[];
 }) {
+  const bars =
+    trendValues && trendValues.length > 0
+      ? trendValues
+      : [30, 44, 48, 50, 55, 52, 60, 68, 64, 72, 75, 70, 78, 82];
+
+  const maxBar = Math.max(...bars, 1);
+
   return (
     <CardStrong className="relative overflow-hidden p-5 sm:p-6">
       <div className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-emerald-400/20 blur-3xl" />
@@ -58,11 +67,11 @@ export function LiveOpsSnapshot({
         <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 sm:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Segregation Quality Trend</p>
           <div className="mt-3 flex h-28 items-end gap-1 rounded-xl border border-emerald-100 bg-gradient-to-b from-emerald-50 to-white p-3">
-            {[30, 44, 48, 50, 55, 52, 60, 68, 64, 72, 75, 70, 78, 82].map((h, idx) => (
+            {bars.map((h, idx) => (
               <motion.div
                 key={idx}
                 initial={{ height: 8, opacity: 0 }}
-                whileInView={{ height: `${h}%`, opacity: 1 }}
+                whileInView={{ height: `${Math.max(12, (h / maxBar) * 100)}%`, opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: idx * 0.03 }}
                 className="flex-1 rounded-t-sm bg-gradient-to-t from-emerald-400 to-emerald-600/80"

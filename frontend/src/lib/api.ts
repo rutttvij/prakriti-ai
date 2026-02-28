@@ -76,38 +76,54 @@ export type CitizenSummary = {
 export const fetchCitizenSummary = () => api.get<CitizenSummary>("/citizen/summary");
 
 export const fetchPublicStats = async () => {
-  const res = await api.get<ApiEnvelope<{ stats: PublicStats }>>("/public/stats");
-  return res.data.data.stats;
+  const res = await api.get("/public/stats");
+  const raw = (res.data?.data?.stats ?? res.data?.stats ?? res.data?.data ?? null) as Record<string, unknown> | null;
+  if (!raw) return null;
+
+  const num = (v: unknown, d = 0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : d;
+  };
+
+  return {
+    total_users: num(raw.total_users ?? raw.users_count),
+    total_waste_logs: num(raw.total_waste_logs ?? raw.total_reports ?? raw.resolved_incidents),
+    total_verified_actions: num(raw.total_verified_actions ?? raw.verified_actions ?? raw.verified_count),
+    total_carbon_saved: num(raw.total_carbon_saved ?? raw.co2_saved ?? raw.carbon_saved_kgco2e),
+    total_pcc_issued: num(raw.total_pcc_issued ?? raw.pcc_issued ?? raw.total_pcc),
+    avg_resolution_time_hours: num(raw.avg_resolution_time_hours ?? raw.avg_resolution_time ?? raw.avg_resolution_hours),
+    open_reports: num(raw.open_reports ?? raw.open_incidents ?? raw.open_count),
+  } as PublicStats;
 };
 
 export const fetchPublicPartners = async () => {
-  const res = await api.get<ApiEnvelope<{ partners: Partner[] }>>("/public/partners");
-  return res.data.data.partners;
+  const res = await api.get("/public/partners");
+  return (res.data?.data?.partners ?? res.data?.partners ?? []) as Partner[];
 };
 
 export const fetchPublicTestimonials = async () => {
-  const res = await api.get<ApiEnvelope<{ testimonials: Testimonial[] }>>("/public/testimonials");
-  return res.data.data.testimonials;
+  const res = await api.get("/public/testimonials");
+  return (res.data?.data?.testimonials ?? res.data?.testimonials ?? []) as Testimonial[];
 };
 
 export const fetchPublicCaseStudies = async () => {
-  const res = await api.get<ApiEnvelope<{ case_studies: CaseStudy[] }>>("/public/case-studies");
-  return res.data.data.case_studies;
+  const res = await api.get("/public/case-studies");
+  return (res.data?.data?.case_studies ?? res.data?.case_studies ?? []) as CaseStudy[];
 };
 
 export const fetchPublicFAQs = async () => {
-  const res = await api.get<ApiEnvelope<{ faqs: FAQItem[] }>>("/public/faqs");
-  return res.data.data.faqs;
+  const res = await api.get("/public/faqs");
+  return (res.data?.data?.faqs ?? res.data?.faqs ?? []) as FAQItem[];
 };
 
 export const fetchPublicConfig = async () => {
-  const res = await api.get<ApiEnvelope<PublicConfig>>("/public/config");
-  return res.data.data;
+  const res = await api.get("/public/config");
+  return (res.data?.data ?? res.data) as PublicConfig;
 };
 
 export const fetchSampleLedger = async () => {
-  const res = await api.get<ApiEnvelope<{ rows: LedgerRow[] }>>("/public/sample-ledger");
-  return res.data.data.rows;
+  const res = await api.get("/public/sample-ledger");
+  return (res.data?.data?.rows ?? res.data?.rows ?? []) as LedgerRow[];
 };
 
 export const submitLead = async (payload: LeadPayload) => {

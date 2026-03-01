@@ -120,32 +120,38 @@ export const AdminUsersPage: React.FC = () => {
 
   return (
     <div className="relative">
-      {/* Soft glow */}
-      <div className="pointer-events-none absolute inset-x-0 -top-10 h-20 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
-
       <div className="relative space-y-5">
         {/* Header */}
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <header
+          className="
+            rounded-3xl border border-white/20 bg-slate-950/26 p-5
+            shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl
+            flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between
+          "
+        >
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/70 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
-              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Super Admin · Users
             </div>
-            <h1 className="mt-3 text-2xl font-bold text-slate-950">
+            <h1
+              className="mt-3 text-3xl font-bold tracking-tight !text-[#dffaf0]"
+              style={{ color: "#dffaf0" }}
+            >
               Users &amp; approvals
             </h1>
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-sm text-emerald-100">
               Activate accounts, change roles, and view registered users across
               Prakriti.AI.
             </p>
           </div>
 
-          <div className="mt-1 flex gap-2 text-[0.7rem] text-slate-600">
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100/80 bg-white/80 px-3 py-1 shadow-sm shadow-emerald-50 backdrop-blur-sm">
+          <div className="mt-1 flex gap-2 text-[0.7rem] text-slate-700">
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1 shadow-sm shadow-emerald-900/10 backdrop-blur-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Active: {totalActive}
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-100/80 bg-white/80 px-3 py-1 shadow-sm shadow-amber-50 backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/45 bg-emerald-50/70 px-3 py-1 shadow-sm shadow-emerald-900/10 backdrop-blur-sm">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               Pending / inactive: {totalPending}
             </span>
@@ -153,16 +159,7 @@ export const AdminUsersPage: React.FC = () => {
         </header>
 
         {/* Filters */}
-        <section
-          className="
-            rounded-[1.6rem]
-            border border-emerald-100/80
-            bg-white/80
-            px-4 py-4
-            shadow-md shadow-emerald-100/70
-            backdrop-blur-sm
-          "
-        >
+        <section className="surface-card-strong rounded-[1.6rem] px-4 py-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-slate-900">
               Filter &amp; search
@@ -300,16 +297,7 @@ export const AdminUsersPage: React.FC = () => {
         )}
 
         {/* Table */}
-        <section
-          className="
-            rounded-[1.8rem]
-            border border-emerald-100/80
-            bg-white/80
-            px-4 py-4
-            shadow-md shadow-emerald-100/70
-            backdrop-blur-sm
-          "
-        >
+        <section className="surface-card-strong rounded-[1.8rem] px-4 py-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">
               {users.length} user{users.length === 1 ? "" : "s"} in view

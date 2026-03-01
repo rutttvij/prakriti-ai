@@ -19,11 +19,16 @@ export default function RoleShellLayout({ roleName, subtitle, navItems, children
   return (
     <main className="relative min-h-screen overflow-hidden landing-aurora">
       <Navbar />
-      <div className="pointer-events-none absolute inset-x-0 -top-56 h-[32rem] bg-[radial-gradient(circle_at_top,_rgba(109,206,170,0.22),_transparent_66%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(8,22,30,0.36)_0%,rgba(17,56,61,0.16)_45%,rgba(30,100,85,0.10)_100%)]" />
 
       <div className="relative mx-auto flex w-full max-w-7xl gap-6 px-4 pb-14 pt-7 sm:pt-8">
-        <aside className="surface-card-strong hidden w-72 shrink-0 p-5 sm:block">
+        <aside
+          className="
+            surface-card-strong hidden p-5 sm:block sm:w-72 sm:shrink-0
+            sm:sticky sm:top-24 sm:self-start
+            sm:max-h-[calc(100vh-9rem)] sm:overflow-y-auto
+          "
+        >
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-emerald-700">{roleName}</p>
           <p className="mt-2 text-xs leading-relaxed text-slate-600">{subtitle}</p>
 
@@ -68,7 +73,7 @@ export default function RoleShellLayout({ roleName, subtitle, navItems, children
           </div>
         </div>
 
-        <section className="role-shell-content flex-1 pb-2 pt-14 sm:pt-0">{children}</section>
+        <section className="role-shell-content min-w-0 flex-1 pb-2 pt-14 sm:pt-0">{children}</section>
       </div>
     </main>
   );

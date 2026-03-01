@@ -241,36 +241,33 @@ export const AdminPccAwardPage: React.FC = () => {
 
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute inset-x-0 -top-10 h-20 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
-
       <div className="relative space-y-5">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <header
+          className="
+            rounded-3xl border border-white/20 bg-slate-950/26 p-5
+            shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl
+            flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between
+          "
+        >
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/80 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
-              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Super Admin · PCC Tokens
             </div>
-            <h1 className="mt-3 text-2xl font-bold text-slate-950">
+            <h1
+              className="mt-3 text-3xl font-bold tracking-tight !text-[#dffaf0]"
+              style={{ color: "#dffaf0" }}
+            >
               PCC token console
             </h1>
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-sm text-emerald-100">
               Award PCC either manually or against a segregation log.
             </p>
           </div>
         </header>
 
         {isSegregationMode && (
-          <section
-            className="
-              max-w-3xl
-              rounded-[1.8rem]
-              border border-emerald-100/80
-              bg-white/80
-              px-5 py-4
-              shadow-md shadow-emerald-100/70
-              backdrop-blur-sm
-            "
-          >
+          <section className="surface-card-strong max-w-3xl rounded-[1.8rem] px-5 py-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">
@@ -304,7 +301,7 @@ export const AdminPccAwardPage: React.FC = () => {
 
             {segLog && (
               <div className="mt-3 grid gap-3 text-[0.75rem] text-slate-700 sm:grid-cols-2">
-                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                <div className="surface-card-strong rounded-2xl p-3">
                   <div className="text-[0.65rem] text-slate-500">Citizen</div>
                   <div className="mt-1 font-semibold text-slate-900">
                     {segLog.citizen.full_name || segLog.citizen.email}
@@ -314,7 +311,7 @@ export const AdminPccAwardPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                <div className="surface-card-strong rounded-2xl p-3">
                   <div className="text-[0.65rem] text-slate-500">Score</div>
                   <div className="mt-1 font-semibold text-slate-900">
                     {segLog.score}
@@ -324,7 +321,7 @@ export const AdminPccAwardPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                <div className="surface-card-strong rounded-2xl p-3">
                   <div className="text-[0.65rem] text-slate-500">Household</div>
                   <div className="mt-1 font-semibold text-slate-900">
                     #{segLog.household_id}
@@ -334,7 +331,7 @@ export const AdminPccAwardPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-emerald-100/80 bg-white/70 p-3">
+                <div className="surface-card-strong rounded-2xl p-3">
                   <div className="text-[0.65rem] text-slate-500">
                     Award status
                   </div>
@@ -354,17 +351,7 @@ export const AdminPccAwardPage: React.FC = () => {
           </section>
         )}
 
-        <section
-          className="
-            max-w-xl
-            rounded-[1.8rem]
-            border border-emerald-100/80
-            bg-white/80
-            px-5 py-5
-            shadow-md shadow-emerald-100/70
-            backdrop-blur-sm
-          "
-        >
+        <section className="surface-card-strong max-w-xl rounded-[1.8rem] px-5 py-5">
           <form onSubmit={activeSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

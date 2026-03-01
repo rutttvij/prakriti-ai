@@ -199,12 +199,7 @@ export const AdminDashboardPage: React.FC = () => {
     return (
       <div className="mt-4 grid gap-3 text-[0.7rem] text-slate-600 md:grid-cols-2">
         <div
-          className="
-            rounded-2xl border border-emerald-50/80
-            bg-white/80 p-3
-            shadow-sm shadow-emerald-50
-            backdrop-blur-sm
-          "
+          className="surface-card-strong rounded-2xl p-3"
         >
           <h3 className="mb-2 text-xs font-semibold text-slate-900">By role</h3>
           <div className="space-y-1.5">
@@ -226,12 +221,7 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
 
         <div
-          className="
-            rounded-2xl border border-emerald-50/80
-            bg-white/80 p-3
-            shadow-sm shadow-emerald-50
-            backdrop-blur-sm
-          "
+          className="surface-card-strong rounded-2xl p-3"
         >
           <h3 className="mb-2 text-xs font-semibold text-slate-900">
             By activity type
@@ -273,10 +263,10 @@ export const AdminDashboardPage: React.FC = () => {
           <Link
             to="/admin/pcc"
             className="
-              rounded-full border border-emerald-100/80 bg-white/70
+              rounded-full border border-emerald-200/45 bg-emerald-50/70
               px-3 py-1.5 text-[0.7rem] font-semibold text-emerald-800
-              shadow-sm shadow-emerald-100/70 backdrop-blur-sm
-              hover:bg-white
+              shadow-sm shadow-emerald-900/10 backdrop-blur-sm
+              hover:bg-emerald-50
             "
           >
             View all
@@ -298,9 +288,9 @@ export const AdminDashboardPage: React.FC = () => {
             No segregation logs found yet.
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-2xl border border-slate-100 bg-white/60">
+          <div className="surface-card-strong mt-3 overflow-x-auto rounded-2xl border-0 bg-transparent p-0">
             <table className="w-full text-left text-[0.75rem] text-slate-700">
-              <thead className="bg-slate-50/70 text-[0.7rem] text-slate-500">
+              <thead className="bg-white/30 text-[0.7rem] text-slate-500">
                 <tr>
                   <th className="px-4 py-2.5">Citizen</th>
                   <th className="px-4 py-2.5">Household</th>
@@ -363,13 +353,7 @@ export const AdminDashboardPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div
-        className="
-          relative rounded-3xl border border-emerald-100/80
-          bg-white/80 px-6 py-5 text-sm text-slate-700
-          shadow-md shadow-emerald-100/70 backdrop-blur-sm
-        "
-      >
+      <div className="surface-card-strong relative rounded-3xl px-6 py-5 text-sm text-slate-700">
         Loading city dashboard…
       </div>
     );
@@ -393,33 +377,33 @@ export const AdminDashboardPage: React.FC = () => {
 
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
-
       <div className="relative space-y-6">
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <header
+          className="
+            rounded-3xl border border-white/20 bg-slate-950/26 p-5
+            shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl
+            flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between
+          "
+        >
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/70 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
-              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Super Admin · City control
             </div>
-            <h1 className="mt-3 text-2xl font-bold text-slate-950">
+            <h1
+              className="mt-3 text-3xl font-bold tracking-tight !text-[#dffaf0]"
+              style={{ color: "#dffaf0" }}
+            >
               City Dashboard
             </h1>
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-sm text-emerald-100">
               Overview of users, operations, and carbon impact across Prakriti.AI.
             </p>
           </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-4">
-          <div
-            className="
-              rounded-3xl border border-emerald-100/80
-              bg-white/80 p-4
-              shadow-md shadow-emerald-100/70
-              backdrop-blur-sm
-            "
-          >
+          <div className="surface-card-strong rounded-3xl p-4">
             <div className="text-[0.7rem] font-medium text-slate-500">
               Total Users
             </div>
@@ -432,14 +416,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div
-            className="
-              rounded-3xl border border-amber-100/80
-              bg-white/80 p-4
-              shadow-md shadow-amber-100/70
-              backdrop-blur-sm
-            "
-          >
+          <div className="surface-card-strong rounded-3xl p-4">
             <div className="text-[0.7rem] font-medium text-slate-500">
               Pending approvals
             </div>
@@ -451,14 +428,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div
-            className="
-              rounded-3xl border border-sky-100/80
-              bg-white/80 p-4
-              shadow-md shadow-sky-100/70
-              backdrop-blur-sm
-            "
-          >
+          <div className="surface-card-strong rounded-3xl p-4">
             <div className="text-[0.7rem] font-medium text-slate-500">
               Waste reports
             </div>
@@ -471,14 +441,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div
-            className="
-              rounded-3xl border border-emerald-100/80
-              bg-white/80 p-4
-              shadow-md shadow-emerald-100/70
-              backdrop-blur-sm
-            "
-          >
+          <div className="surface-card-strong rounded-3xl p-4">
             <div className="text-[0.7rem] font-medium text-slate-500">
               Segregation score
             </div>
@@ -494,14 +457,7 @@ export const AdminDashboardPage: React.FC = () => {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-          <div
-            className="
-              rounded-3xl border border-emerald-100/80
-              bg-white/80 p-4
-              shadow-md shadow-emerald-100/70
-              backdrop-blur-sm
-            "
-          >
+          <div className="surface-card-strong rounded-3xl p-4">
             <h2 className="text-sm font-semibold text-slate-900">
               Carbon &amp; PCC overview
             </h2>
@@ -530,14 +486,7 @@ export const AdminDashboardPage: React.FC = () => {
             {renderCarbonBreakdown()}
           </div>
 
-          <div
-            className="
-              rounded-3xl border border-emerald-100/80
-              bg-white/80 p-4
-              shadow-md shadow-emerald-100/70
-              backdrop-blur-sm
-            "
-          >
+          <div className="surface-card-strong rounded-3xl p-4">
             <h2 className="text-sm font-semibold text-slate-900">
               Carbon &amp; PCC trend
             </h2>
@@ -545,14 +494,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         </section>
 
-        <section
-          className="
-            rounded-3xl border border-emerald-100/80
-            bg-white/80 p-4
-            shadow-md shadow-emerald-100/70
-            backdrop-blur-sm
-          "
-        >
+        <section className="surface-card-strong rounded-3xl p-4">
           {renderRecentSegregationLogs()}
         </section>
       </div>

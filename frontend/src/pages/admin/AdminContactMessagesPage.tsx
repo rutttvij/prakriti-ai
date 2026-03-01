@@ -51,32 +51,38 @@ export const AdminContactMessagesPage: React.FC = () => {
 
   return (
     <div className="relative">
-      {/* soft glow at top */}
-      <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
-
       <div className="relative space-y-5">
         {/* Header */}
-        <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <header
+          className="
+            rounded-3xl border border-white/20 bg-slate-950/26 p-5
+            shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl
+            flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between
+          "
+        >
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/80 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-800 shadow-sm shadow-emerald-100/80 backdrop-blur-sm">
-              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Super Admin · Contact
             </div>
-            <h1 className="mt-3 text-2xl font-bold text-slate-950">
+            <h1
+              className="mt-3 text-3xl font-bold tracking-tight !text-[#dffaf0]"
+              style={{ color: "#dffaf0" }}
+            >
               Contact messages
             </h1>
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-sm text-emerald-100">
               View and search incoming queries from the public contact form and
               direct the right team to respond.
             </p>
           </div>
 
           <div className="mt-1 flex flex-wrap gap-3 text-[0.7rem]">
-            <div className="inline-flex items-center gap-1 rounded-full border border-emerald-100/80 bg-white/80 px-3 py-1 shadow-sm shadow-emerald-100/70 backdrop-blur-sm text-slate-700">
+            <div className="inline-flex items-center gap-1 rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1 shadow-sm shadow-emerald-900/10 backdrop-blur-sm text-slate-700">
               <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
               Total: <span className="font-semibold">{total}</span>
             </div>
-            <div className="inline-flex items-center gap-1 rounded-full border border-emerald-100/80 bg-white/80 px-3 py-1 shadow-sm shadow-emerald-100/70 backdrop-blur-sm text-slate-700">
+            <div className="inline-flex items-center gap-1 rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1 shadow-sm shadow-emerald-900/10 backdrop-blur-sm text-slate-700">
               <span className="inline-block h-2 w-2 rounded-full bg-emerald-300" />
               In view: <span className="font-semibold">{inView}</span>
             </div>
@@ -84,15 +90,7 @@ export const AdminContactMessagesPage: React.FC = () => {
         </header>
 
         {/* Search / filters card */}
-        <section
-          className="
-            rounded-[1.6rem]
-            border border-emerald-100/80
-            bg-white/80 px-4 py-4 sm:px-5 sm:py-4
-            shadow-md shadow-emerald-100/70
-            backdrop-blur-sm
-          "
-        >
+        <section className="surface-card-strong rounded-[1.6rem] px-4 py-4 sm:px-5 sm:py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">
@@ -135,17 +133,8 @@ export const AdminContactMessagesPage: React.FC = () => {
         </section>
 
         {/* Table card */}
-        <section
-          className="
-            overflow-hidden
-            rounded-[1.8rem]
-            border border-emerald-100/80
-            bg-white/80
-            shadow-md shadow-emerald-100/70
-            backdrop-blur-sm
-          "
-        >
-          <div className="border-b border-emerald-100/70 bg-emerald-50/70 px-4 py-3 sm:px-5">
+        <section className="surface-card-strong overflow-hidden rounded-[1.8rem]">
+          <div className="border-b border-emerald-100/70 bg-white/30 px-4 py-3 sm:px-5">
             <h2 className="text-sm font-semibold text-slate-900">
               {inView} message{inView === 1 ? "" : "s"} in view
             </h2>
@@ -153,7 +142,7 @@ export const AdminContactMessagesPage: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="min-w-full text-xs sm:text-sm">
-              <thead className="bg-emerald-50/80 border-b border-emerald-100">
+              <thead className="bg-white/30 border-b border-emerald-100">
                 <tr className="text-[0.7rem] text-slate-600">
                   <th className="px-4 py-3 text-left sm:px-5">Name</th>
                   <th className="px-4 py-3 text-left sm:px-5">Email</th>

@@ -1,204 +1,188 @@
-// src/pages/admin/AdminContactMessagesPage.tsx
+import { useEffect, useMemo, useState } from "react";
 
-import { useEffect, useState } from "react";
-import api from "../../lib/api";
+import {
+  convertAdminContactMessageToDemo,
+  fetchAdminContactMessage,
+  fetchAdminContactMessages,
+  updateAdminContactMessage,
+} from "../../lib/api";
+import type {
+  AdminContactMessage,
+  AdminContactMessageListItem,
+  ContactMessageStatus,
+} from "../../lib/types";
+import { useToast } from "../../components/ui/Toast";
+import ContactMessageDrawer from "../../components/admin/contact/ContactMessageDrawer";
+import ContactMessagesFilters from "../../components/admin/contact/ContactMessagesFilters";
+import ContactMessagesTable from "../../components/admin/contact/ContactMessagesTable";
 
-type ContactMessage = {
-  id: number;
-  name: string;
-  email: string;
-  message: string;
-  created_at: string;
-};
+const PAGE_SIZE = 50;
 
 export const AdminContactMessagesPage: React.FC = () => {
-  const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [filtered, setFiltered] = useState<ContactMessage[]>([]);
-  const [search, setSearch] = useState("");
+  const { push } = useToast();
+
+  const [queryInput, setQueryInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"" | ContactMessageStatus>("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+
   const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<AdminContactMessageListItem[]>([]);
+  const [total, setTotal] = useState(0);
+
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<AdminContactMessage | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const res = await api.get<ContactMessage[]>("/contact/admin");
-        setMessages(res.data || []);
-        setFiltered(res.data || []);
-      } catch (err) {
-        console.error("Failed to load messages", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const timer = window.setTimeout(() => {
+      setQuery(queryInput.trim());
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [queryInput]);
 
-    fetchMessages();
-  }, []);
+  const loadMessages = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchAdminContactMessages({
+        q: query || undefined,
+        status: status || undefined,
+        unread_only: unreadOnly || undefined,
+        page: 1,
+        page_size: PAGE_SIZE,
+      });
+      setRows(res.items || []);
+      setTotal(res.total || 0);
+    } catch (err: any) {
+      push("error", err?.response?.data?.detail || "Failed to load contact messages.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Live filtering
   useEffect(() => {
-    const s = search.toLowerCase();
-    setFiltered(
-      messages.filter(
-        (m) =>
-          m.name.toLowerCase().includes(s) ||
-          m.email.toLowerCase().includes(s) ||
-          m.message.toLowerCase().includes(s)
+    loadMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, status, unreadOnly]);
+
+  const openDetails = async (id: number) => {
+    setSelectedId(id);
+    setDetailsLoading(true);
+    try {
+      const res = await fetchAdminContactMessage(id);
+      setSelected(res);
+    } catch (err: any) {
+      push("error", err?.response?.data?.detail || "Failed to load message details.");
+      setSelectedId(null);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const mergeRow = (next: AdminContactMessage) => {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === next.id
+          ? {
+              ...row,
+              status: next.status,
+              is_read: next.is_read,
+              message_preview: next.message.slice(0, 140) + (next.message.length > 140 ? "..." : ""),
+            }
+          : row
       )
     );
-  }, [search, messages]);
+  };
 
-  const total = messages.length;
-  const inView = filtered.length;
+  const handleSave = async (payload: { status: ContactMessageStatus; is_read: boolean; admin_notes: string }) => {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      const updated = await updateAdminContactMessage(selected.id, payload);
+      setSelected(updated);
+      mergeRow(updated);
+      push("success", "Message updated.");
+      if (unreadOnly && updated.is_read) {
+        setRows((prev) => prev.filter((row) => row.id !== updated.id));
+      }
+    } catch (err: any) {
+      push("error", err?.response?.data?.detail || "Failed to update message.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConvert = async () => {
+    if (!selected) return;
+    setConverting(true);
+    try {
+      const res = await convertAdminContactMessageToDemo(selected.id);
+      setSelected(res.contact_message);
+      mergeRow(res.contact_message);
+      push("success", `Converted to demo request #${res.demo_request_id}.`);
+    } catch (err: any) {
+      push("error", err?.response?.data?.detail || "Failed to convert to demo request.");
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const unreadCount = useMemo(() => rows.filter((row) => !row.is_read).length, [rows]);
+  const newCount = useMemo(() => rows.filter((row) => row.status === "new").length, [rows]);
 
   return (
-    <div className="relative">
-      <div className="relative space-y-5">
-        {/* Header */}
-        <header
-          className="
-            rounded-3xl border border-white/20 bg-slate-950/26 p-5
-            shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl
-            flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between
-          "
-        >
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
-              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Super Admin · Contact
-            </div>
-            <h1
-              className="mt-3 text-3xl font-bold tracking-tight !text-[#dffaf0]"
-              style={{ color: "#dffaf0" }}
-            >
-              Contact messages
-            </h1>
-            <p className="mt-1 text-sm text-emerald-100">
-              View and search incoming queries from the public contact form and
-              direct the right team to respond.
-            </p>
+    <div className="relative space-y-5">
+      <header className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Super Admin · Contact
+        </div>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight !text-[#dffaf0]" style={{ color: "#dffaf0" }}>
+          Contact messages inbox
+        </h1>
+        <p className="mt-1 text-sm text-emerald-100">
+          Triage incoming messages with read state, status workflow, notes, and demo conversion.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-[0.72rem]">
+          <div className="inline-flex items-center gap-1 rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1 text-slate-700">
+            Total: <span className="font-semibold">{total}</span>
           </div>
-
-          <div className="mt-1 flex flex-wrap gap-3 text-[0.7rem]">
-            <div className="inline-flex items-center gap-1 rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1 shadow-sm shadow-emerald-900/10 backdrop-blur-sm text-slate-700">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-              Total: <span className="font-semibold">{total}</span>
-            </div>
-            <div className="inline-flex items-center gap-1 rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1 shadow-sm shadow-emerald-900/10 backdrop-blur-sm text-slate-700">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-300" />
-              In view: <span className="font-semibold">{inView}</span>
-            </div>
+          <div className="inline-flex items-center gap-1 rounded-full border border-amber-200/55 bg-amber-50/70 px-3 py-1 text-slate-700">
+            Unread: <span className="font-semibold">{unreadCount}</span>
           </div>
-        </header>
-
-        {/* Search / filters card */}
-        <section className="surface-card-strong rounded-[1.6rem] px-4 py-4 sm:px-5 sm:py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900">
-                Filter &amp; search
-              </h2>
-              <p className="text-[0.7rem] text-slate-600">
-                Search by name, email or message content.
-              </p>
-            </div>
-
-            <div className="flex w-full items-center gap-2 sm:max-w-md">
-              <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
-                  🔍
-                </span>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search messages…"
-                  className="
-                    w-full rounded-full border border-emerald-100/80
-                    bg-white/80 pl-8 pr-3 py-2 text-xs
-                    shadow-sm shadow-emerald-50
-                    focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400
-                  "
-                />
-              </div>
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  className="whitespace-nowrap rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-[0.7rem] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+          <div className="inline-flex items-center gap-1 rounded-full border border-sky-200/55 bg-sky-50/70 px-3 py-1 text-slate-700">
+            New: <span className="font-semibold">{newCount}</span>
           </div>
-        </section>
+        </div>
+      </header>
 
-        {/* Table card */}
-        <section className="surface-card-strong overflow-hidden rounded-[1.8rem]">
-          <div className="border-b border-emerald-100/70 bg-white/30 px-4 py-3 sm:px-5">
-            <h2 className="text-sm font-semibold text-slate-900">
-              {inView} message{inView === 1 ? "" : "s"} in view
-            </h2>
-          </div>
+      <ContactMessagesFilters
+        search={queryInput}
+        onSearchChange={setQueryInput}
+        status={status}
+        onStatusChange={setStatus}
+        unreadOnly={unreadOnly}
+        onUnreadOnlyChange={setUnreadOnly}
+      />
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-xs sm:text-sm">
-              <thead className="bg-white/30 border-b border-emerald-100">
-                <tr className="text-[0.7rem] text-slate-600">
-                  <th className="px-4 py-3 text-left sm:px-5">Name</th>
-                  <th className="px-4 py-3 text-left sm:px-5">Email</th>
-                  <th className="px-4 py-3 text-left sm:px-5">Message</th>
-                  <th className="px-4 py-3 text-left sm:px-5">Received</th>
-                </tr>
-              </thead>
+      <ContactMessagesTable rows={rows} loading={loading} onOpen={openDetails} />
 
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-slate-500 animate-pulse sm:px-5"
-                    >
-                      Loading messages…
-                    </td>
-                  </tr>
-                ) : inView === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-slate-500 sm:px-5"
-                    >
-                      No messages found.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((msg) => (
-                    <tr
-                      key={msg.id}
-                      className="border-b border-emerald-100/60 bg-white/40 hover:bg-emerald-50/50 transition"
-                    >
-                      <td className="px-4 py-3 text-slate-900 font-medium sm:px-5">
-                        {msg.name}
-                        <div className="text-[0.65rem] text-slate-500">
-                          No.{msg.id}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-emerald-700 sm:px-5">
-                        {msg.email}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700 sm:px-5 sm:max-w-md">
-                        <div className="line-clamp-2">{msg.message}</div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-500 text-[0.7rem] sm:px-5 whitespace-nowrap">
-                        {new Date(msg.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+      <ContactMessageDrawer
+        open={selectedId !== null}
+        loading={detailsLoading}
+        saving={saving}
+        converting={converting}
+        item={selected}
+        onClose={() => {
+          setSelectedId(null);
+          setSelected(null);
+        }}
+        onSave={handleSave}
+        onConvert={handleConvert}
+      />
     </div>
   );
 };

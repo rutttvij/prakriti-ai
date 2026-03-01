@@ -2,8 +2,11 @@ import axios from "axios";
 
 import type {
   ApiEnvelope,
+  AdminContactMessage,
+  AdminContactMessageListResponse,
   CaseStudy,
   ContactPayload,
+  ContactMessageStatus,
   DemoRequest,
   DemoRequestListResponse,
   DemoRequestStatus,
@@ -232,5 +235,40 @@ export const updateAdminDemoRequest = async (
   payload: { status?: DemoRequestStatus; admin_notes?: string }
 ) => {
   const res = await api.patch<DemoRequest>(`/admin/demo-requests/${id}`, payload);
+  return res.data;
+};
+
+export const fetchAdminContactMessages = async (params?: {
+  q?: string;
+  status?: ContactMessageStatus;
+  unread_only?: boolean;
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get<AdminContactMessageListResponse>("/admin/contact-messages/", { params });
+  return res.data;
+};
+
+export const fetchAdminContactMessage = async (id: number) => {
+  const res = await api.get<AdminContactMessage>(`/admin/contact-messages/${id}`);
+  return res.data;
+};
+
+export const updateAdminContactMessage = async (
+  id: number,
+  payload: { status?: ContactMessageStatus; is_read?: boolean; admin_notes?: string | null }
+) => {
+  const res = await api.patch<AdminContactMessage>(`/admin/contact-messages/${id}`, payload);
+  return res.data;
+};
+
+export const convertAdminContactMessageToDemo = async (
+  id: number,
+  payload?: { organization?: string; org_type?: "city" | "campus" | "society" | "corporate"; phone?: string }
+) => {
+  const res = await api.post<{ demo_request_id: number; contact_message: AdminContactMessage }>(
+    `/admin/contact-messages/${id}/convert-to-demo`,
+    payload || {}
+  );
   return res.data;
 };

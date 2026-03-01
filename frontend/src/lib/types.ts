@@ -168,3 +168,37 @@ export type DemoRequestListResponse = {
   page: number;
   page_size: number;
 };
+
+export type ContactMessageStatus = "new" | "in_progress" | "replied" | "closed" | "spam";
+
+export type AdminContactMessageListItem = {
+  id: number;
+  name: string;
+  email: string;
+  subject?: string | null;
+  message_preview: string;
+  status: ContactMessageStatus;
+  is_read: boolean;
+  created_at: string;
+};
+
+export type AdminContactMessage = {
+  id: number;
+  name: string;
+  email: string;
+  subject?: string | null;
+  message: string;
+  status: ContactMessageStatus;
+  is_read: boolean;
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  converted_demo_request_id?: number | null;
+};
+
+export type AdminContactMessageListResponse = {
+  items: AdminContactMessageListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+};

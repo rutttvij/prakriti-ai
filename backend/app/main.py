@@ -23,6 +23,7 @@ from app.api import segregation as segregation_router
 from app.api import training as training_router
 from app.api import waste_reporting as waste_router
 from app.api.v1 import admin_content as admin_content_router
+from app.api.v1 import admin_contact_messages as admin_contact_messages_router
 from app.api.v1 import admin_demo_requests as admin_demo_requests_router
 from app.api.v1 import admin_training as admin_training_router
 from app.api.v1 import public as public_router
@@ -199,6 +200,11 @@ def ensure_pcc_schema_compat() -> None:
             )
         )
         conn.execute(text("ALTER TABLE IF EXISTS contact_messages ADD COLUMN IF NOT EXISTS subject VARCHAR(255) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS contact_messages ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'new';"))
+        conn.execute(text("ALTER TABLE IF EXISTS contact_messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE IF EXISTS contact_messages ADD COLUMN IF NOT EXISTS admin_notes TEXT NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS contact_messages ADD COLUMN IF NOT EXISTS converted_demo_request_id INTEGER NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS contact_messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();"))
         conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS audience VARCHAR(32) NOT NULL DEFAULT 'citizen';"))
         conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS summary TEXT NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS difficulty VARCHAR(32) NOT NULL DEFAULT 'beginner';"))
@@ -334,6 +340,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_content_router.router, prefix=api_prefix)
     app.include_router(admin_training_router.router, prefix=api_prefix)
     app.include_router(admin_demo_requests_router.router, prefix=api_prefix)
+    app.include_router(admin_contact_messages_router.router, prefix=api_prefix)
 
     return app
 

@@ -89,21 +89,21 @@ export default function BulkDashboardPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Bulk Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-600">Monitor waste logs, pickups, verification and earned credits.</p>
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <h1 className="text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Bulk Dashboard</h1>
+        <p className="mt-1 text-sm text-emerald-100">Monitor waste logs, pickups, verification and earned credits.</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Link to="/bulk/training" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+          <Link to="/bulk/training" className="btn-secondary px-4 py-2 text-sm">
             Go to Training
           </Link>
-          <Link to="/bulk/waste-log" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+          <Link to="/bulk/waste-log" className="btn-secondary px-4 py-2 text-sm">
             Log Waste
           </Link>
-          <Link to="/bulk/insights" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+          <Link to="/bulk/insights" className="btn-secondary px-4 py-2 text-sm">
             View Insights
           </Link>
         </div>
-      </div>
+      </section>
 
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>

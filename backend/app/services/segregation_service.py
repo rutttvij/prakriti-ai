@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta
 from typing import Optional, List
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
 from app.models.household import Household, SegregationLog
@@ -49,6 +50,20 @@ def log_segregation(
     notes: Optional[str] = None,
     waste_report_id: Optional[int] = None,
 ) -> SegregationLog:
+    existing_log = (
+        db.query(SegregationLog)
+        .filter(
+            SegregationLog.household_id == household_id,
+            SegregationLog.log_date == log_date,
+        )
+        .first()
+    )
+    if existing_log is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Segregation log already exists for household {household_id} on {log_date.isoformat()}",
+        )
+
     score = calculate_segregation_score(
         dry_kg=dry_kg,
         wet_kg=wet_kg,
@@ -94,7 +109,14 @@ def log_segregation(
         citizen_id=citizen_id,
     )
     db.add(log)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Segregation log already exists for household {household_id} on {log_date.isoformat()}",
+        )
     db.refresh(log)
 
     # ---- Carbon + PCC integration ----

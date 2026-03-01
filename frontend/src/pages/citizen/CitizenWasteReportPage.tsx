@@ -18,6 +18,8 @@ export default function CitizenWasteReportPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const [classificationLabel, setClassificationLabel] = useState("");
   const [classificationConfidence, setClassificationConfidence] = useState<number | "">("");
@@ -29,8 +31,9 @@ export default function CitizenWasteReportPage() {
   const [loadingAnalyze, setLoadingAnalyze] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pickerInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -61,6 +64,42 @@ export default function CitizenWasteReportPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [previewOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cameraOpen || !videoRef.current || !streamRef.current) return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    video.srcObject = stream;
+
+    const startVideo = async () => {
+      try {
+        await video.play();
+      } catch {
+        setCameraError("Camera preview failed to start. Check browser camera permission.");
+      }
+    };
+
+    if (video.readyState >= 1) {
+      void startVideo();
+    } else {
+      video.onloadedmetadata = () => {
+        void startVideo();
+      };
+    }
+
+    return () => {
+      video.onloadedmetadata = null;
+    };
+  }, [cameraOpen]);
+
   const useMyLocation = () => {
     if (!navigator.geolocation) {
       push("error", "Geolocation is not supported in this browser.");
@@ -81,6 +120,13 @@ export default function CitizenWasteReportPage() {
     setFilePathFromServer("");
   };
 
+  const clearSelectedImage = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    resetAnalysis();
+  };
+
   const selectFile = (file: File | null) => {
     if (!file) return;
 
@@ -99,13 +145,83 @@ export default function CitizenWasteReportPage() {
     e.target.value = "";
   };
 
-  const openCamera = () => {
-    cameraInputRef.current?.click();
+  const openPicker = () => {
+    const input = pickerInputRef.current;
+    if (!input) return;
+
+    const maybeShowPicker = (input as HTMLInputElement & { showPicker?: () => void }).showPicker;
+    if (typeof maybeShowPicker === "function") {
+      maybeShowPicker.call(input);
+      return;
+    }
+    input.click();
   };
 
-  const openFilePicker = () => {
-    fileInputRef.current?.click();
+  const closeCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraOpen(false);
+    setCameraError(null);
   };
+
+  const openCamera = async () => {
+    setCameraError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      push("error", "Camera is not supported in this browser. Opening file picker.");
+      openPicker();
+      return;
+    }
+
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setCameraOpen(true);
+    } catch {
+      push("error", "Could not access camera. Check permissions.");
+    }
+  };
+
+  const captureFromCamera = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setCameraError("Failed to capture image.");
+      return;
+    }
+    ctx.drawImage(video, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92);
+    });
+    if (!blob) {
+      setCameraError("Failed to capture image.");
+      return;
+    }
+
+    const file = new File([blob], `camera-${Date.now()}.jpg`, { type: "image/jpeg" });
+    selectFile(file);
+    closeCamera();
+  };
+
+  const openFilePicker = () => openPicker();
 
   const handleAnalyze = async () => {
     if (!selectedFile) {
@@ -203,17 +319,9 @@ export default function CitizenWasteReportPage() {
           </div>
 
           <input
-            ref={cameraInputRef}
+            ref={pickerInputRef}
             type="file"
-            className="hidden"
-            accept="image/*"
-            capture="environment"
-            onChange={onFileChange}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
+            className="sr-only"
             accept="image/*"
             onChange={onFileChange}
           />
@@ -228,6 +336,14 @@ export default function CitizenWasteReportPage() {
             >
               <img src={previewUrl} alt="Selected preview" className="h-56 w-full rounded-xl object-cover md:h-72" />
             </button>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={openCamera}>
+                Recapture
+              </Button>
+              <Button type="button" variant="secondary" onClick={clearSelectedImage}>
+                Remove image
+              </Button>
+            </div>
           </div>
         )}
 
@@ -252,18 +368,18 @@ export default function CitizenWasteReportPage() {
         />
 
         <div className="grid gap-3 md:grid-cols-2">
-          <input
-            readOnly
-            className="rounded-xl border border-white/40 bg-slate-100 px-3 py-2 text-sm"
-            placeholder="Classification label"
-            value={classificationLabel}
-          />
-          <input
-            readOnly
-            className="rounded-xl border border-white/40 bg-slate-100 px-3 py-2 text-sm"
-            placeholder="Classification confidence"
-            value={classificationConfidence === "" ? "" : Number(classificationConfidence).toFixed(4)}
-          />
+          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/70 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Classification Label</p>
+            <p className="mt-1 text-lg font-semibold text-emerald-900">
+              {classificationLabel || "—"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/70 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Accuracy (Confidence)</p>
+            <p className="mt-1 text-lg font-semibold text-emerald-900">
+              {classificationConfidence === "" ? "—" : `${(Number(classificationConfidence) * 100).toFixed(2)}%`}
+            </p>
+          </div>
           <input
             type="number"
             step="0.000001"
@@ -308,6 +424,32 @@ export default function CitizenWasteReportPage() {
               Close
             </button>
             <img src={previewUrl} alt="Report full preview" className="max-h-[86vh] max-w-[90vw] rounded-xl object-contain" />
+          </div>
+        </div>
+      )}
+
+      {cameraOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4" onClick={closeCamera}>
+          <div
+            className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-white/20 bg-slate-900 p-3 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-100">Use camera</p>
+              <button type="button" className="rounded-full bg-black/60 px-3 py-1 text-sm text-white" onClick={closeCamera}>
+                Close
+              </button>
+            </div>
+            <video ref={videoRef} autoPlay playsInline muted className="h-[56vh] w-full rounded-xl bg-black object-cover" />
+            {cameraError && <p className="mt-2 text-sm text-rose-300">{cameraError}</p>}
+            <div className="mt-3 flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={closeCamera}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={captureFromCamera}>
+                Capture
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -163,10 +163,10 @@ def _handle_training_completion_effects(
     criteria_key = f"training_module_{module_id}_completed"
     create_badge_if_missing(
         db=db,
-        name="Training Champion",
+        name=f"Training Champion · Module {module_id}",
         criteria_key=criteria_key,
         category=BadgeCategory.TRAINING,
-        description="Completed a mandatory training module",
+        description=f"Completed training module {module_id}",
         icon="badge_training_completed",
     )
     award_badge_if_not_awarded(

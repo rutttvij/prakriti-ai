@@ -24,6 +24,13 @@ const EMPTY_SUMMARY: CitizenSegregationSummary = {
   recent_logs: [],
 };
 
+function formatLocalISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export default function CitizenInsightsPage() {
   const [households, setHouseholds] = useState<CitizenHousehold[]>([]);
   const [householdId, setHouseholdId] = useState<number | null>(null);
@@ -85,7 +92,7 @@ export default function CitizenInsightsPage() {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
       d.setDate(d.getDate() - i);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = formatLocalISODate(d);
       const row = byDate.get(iso);
       out.push({
         day_label: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),

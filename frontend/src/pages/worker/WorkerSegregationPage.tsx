@@ -214,7 +214,11 @@ export default function WorkerSegregationPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Could not save segregation log. Please try again.");
+      const detail =
+        (err as any)?.response?.data?.detail ||
+        (err as any)?.response?.data?.message ||
+        "Could not save segregation log. Please try again.";
+      setError(detail);
     } finally {
       setSubmitting(false);
     }

@@ -4,6 +4,9 @@ import type {
   ApiEnvelope,
   CaseStudy,
   ContactPayload,
+  DemoRequest,
+  DemoRequestListResponse,
+  DemoRequestStatus,
   FAQItem,
   LeadPayload,
   LedgerRow,
@@ -12,6 +15,11 @@ import type {
   PublicConfig,
   PublicStats,
   Testimonial,
+  TrainingLesson,
+  TrainingLessonType,
+  TrainingModuleAdmin,
+  TrainingModuleListResponse,
+  TrainingModulePayload,
 } from "./types";
 
 const API_ROOT = (import.meta.env.VITE_API_BASE_URL?.trim() || "http://127.0.0.1:8000") as string;
@@ -145,3 +153,84 @@ export const subscribeNewsletter = async (payload: NewsletterPayload) => {
 };
 
 export default api;
+
+export const fetchAdminTrainingModules = async (params?: {
+  audience?: string;
+  published?: boolean;
+  q?: string;
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get<TrainingModuleListResponse>("/admin/training/modules", { params });
+  return res.data;
+};
+
+export const fetchAdminTrainingModule = async (id: number) => {
+  const res = await api.get<TrainingModuleAdmin>(`/admin/training/modules/${id}`);
+  return res.data;
+};
+
+export const createAdminTrainingModule = async (payload: TrainingModulePayload) => {
+  const res = await api.post<TrainingModuleAdmin>("/admin/training/modules", payload);
+  return res.data;
+};
+
+export const updateAdminTrainingModule = async (id: number, payload: Partial<TrainingModulePayload>) => {
+  const res = await api.patch<TrainingModuleAdmin>(`/admin/training/modules/${id}`, payload);
+  return res.data;
+};
+
+export const deleteAdminTrainingModule = async (id: number) => {
+  await api.delete(`/admin/training/modules/${id}`);
+};
+
+export const createTrainingLesson = async (
+  moduleId: number,
+  payload: { lesson_type: TrainingLessonType; title: string; content: string; order_index?: number }
+) => {
+  const res = await api.post<TrainingLesson>(`/admin/training/modules/${moduleId}/lessons`, payload);
+  return res.data;
+};
+
+export const updateTrainingLesson = async (
+  lessonId: number,
+  payload: Partial<{ lesson_type: TrainingLessonType; title: string; content: string; order_index: number }>
+) => {
+  const res = await api.patch<TrainingLesson>(`/admin/training/lessons/${lessonId}`, payload);
+  return res.data;
+};
+
+export const deleteTrainingLesson = async (lessonId: number) => {
+  await api.delete(`/admin/training/lessons/${lessonId}`);
+};
+
+export const reorderTrainingLessons = async (moduleId: number, lessonIds: number[]) => {
+  const res = await api.post<TrainingLesson[]>(`/admin/training/modules/${moduleId}/reorder-lessons`, {
+    lesson_ids: lessonIds,
+  });
+  return res.data;
+};
+
+export const fetchAdminDemoRequests = async (params?: {
+  q?: string;
+  status?: string;
+  org_type?: string;
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get<DemoRequestListResponse>("/admin/demo-requests/", { params });
+  return res.data;
+};
+
+export const fetchAdminDemoRequest = async (id: number) => {
+  const res = await api.get<DemoRequest>(`/admin/demo-requests/${id}`);
+  return res.data;
+};
+
+export const updateAdminDemoRequest = async (
+  id: number,
+  payload: { status?: DemoRequestStatus; admin_notes?: string }
+) => {
+  const res = await api.patch<DemoRequest>(`/admin/demo-requests/${id}`, payload);
+  return res.data;
+};

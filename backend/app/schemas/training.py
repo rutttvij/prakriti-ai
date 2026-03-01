@@ -4,30 +4,33 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 
-class TrainingModuleBase(BaseModel):
+class TrainingLessonPublicRead(BaseModel):
+    id: int
+    order_index: int
+    lesson_type: str
+    title: str
+    content: str
+
+    class Config:
+        from_attributes = True
+
+
+class TrainingModuleRead(BaseModel):
+    id: int
     title: str
     description: Optional[str] = None
-    content_type: str  # "VIDEO", "ARTICLE", etc.
+    content_type: str
     content_url: Optional[str] = None
     order_index: int = 0
     is_active: bool = True
 
-
-class TrainingModuleCreate(TrainingModuleBase):
-    pass
-
-
-class TrainingModuleUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    content_type: Optional[str] = None
-    content_url: Optional[str] = None
-    order_index: Optional[int] = None
-    is_active: Optional[bool] = None
-
-
-class TrainingModuleRead(TrainingModuleBase):
-    id: int
+    audience: Optional[str] = None
+    summary: Optional[str] = None
+    difficulty: Optional[str] = None
+    est_minutes: Optional[int] = None
+    cover_image_url: Optional[str] = None
+    is_published: bool = False
+    lessons: List[TrainingLessonPublicRead] = []
 
     class Config:
         from_attributes = True

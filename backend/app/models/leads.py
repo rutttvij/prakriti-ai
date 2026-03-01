@@ -25,6 +25,21 @@ class Lead(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
 
 
+class DemoRequest(Base):
+    __tablename__ = "demo_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    organization = Column(String(255), nullable=False)
+    org_type = Column(String(64), nullable=False, index=True)
+    email = Column(String(255), nullable=False, index=True)
+    phone = Column(String(50), nullable=True)
+    message = Column(Text, nullable=True)
+    status = Column(String(32), nullable=False, default="new", index=True)
+    admin_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+
 class NewsletterSubscriber(Base):
     __tablename__ = "newsletter_subscribers"
 

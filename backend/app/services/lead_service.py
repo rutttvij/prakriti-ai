@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.contact import ContactMessage
-from app.models.leads import Lead, NewsletterSubscriber
+from app.models.leads import DemoRequest, Lead, NewsletterSubscriber
 from app.schemas.leads import ContactCreate, LeadCreate
 
 
@@ -26,6 +26,18 @@ def create_lead(db: Session, payload: LeadCreate) -> Lead:
         status="new",
     )
     db.add(lead)
+
+    demo_request = DemoRequest(
+        name=_clean(payload.name) or payload.name,
+        organization=_clean(payload.org_name) or payload.org_name,
+        org_type=payload.org_type,
+        email=payload.email.lower(),
+        phone=_clean(payload.phone),
+        message=_clean(payload.message),
+        status="new",
+    )
+    db.add(demo_request)
+
     db.flush()
     return lead
 

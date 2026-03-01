@@ -99,3 +99,72 @@ export type ContactPayload = {
 export type NewsletterPayload = {
   email: string;
 };
+
+export type TrainingAudience = "citizen" | "bulk_generator";
+export type TrainingDifficulty = "beginner" | "intermediate" | "advanced";
+export type TrainingLessonType = "video" | "article" | "pdf" | "quiz" | "link";
+
+export type TrainingLesson = {
+  id: number;
+  module_id: number;
+  order_index: number;
+  lesson_type: TrainingLessonType;
+  title: string;
+  content: string;
+  created_at: string;
+};
+
+export type TrainingModuleAdmin = {
+  id: number;
+  audience: TrainingAudience;
+  title: string;
+  summary?: string | null;
+  difficulty: TrainingDifficulty;
+  est_minutes: number;
+  cover_image_url?: string | null;
+  is_published: boolean;
+  lessons_count?: number;
+  lessons?: TrainingLesson[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type TrainingModuleListResponse = {
+  items: TrainingModuleAdmin[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type TrainingModulePayload = {
+  audience: TrainingAudience;
+  title: string;
+  summary?: string;
+  difficulty: TrainingDifficulty;
+  est_minutes: number;
+  cover_image_url?: string;
+  is_published: boolean;
+};
+
+export type DemoRequestStatus = "new" | "contacted" | "qualified" | "closed";
+export type DemoRequestOrgType = "city" | "campus" | "society" | "corporate";
+
+export type DemoRequest = {
+  id: number;
+  name: string;
+  organization: string;
+  org_type: DemoRequestOrgType;
+  email: string;
+  phone?: string | null;
+  message?: string | null;
+  status: DemoRequestStatus;
+  admin_notes?: string | null;
+  created_at: string;
+};
+
+export type DemoRequestListResponse = {
+  items: DemoRequest[];
+  total: number;
+  page: number;
+  page_size: number;
+};

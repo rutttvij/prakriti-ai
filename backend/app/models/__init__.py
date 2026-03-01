@@ -1,6 +1,6 @@
 from app.models.user import User, UserRole
 from app.models.badge import Badge, UserBadge
-from app.models.training import TrainingModule, TrainingProgress
+from app.models.training import TrainingModule, TrainingProgress, TrainingLesson
 from app.models.household import Household, SegregationLog
 from app.models.waste_report import WasteReport
 from app.models.facility import Facility
@@ -14,7 +14,7 @@ from app.models.marketing import (
     MarketingFAQ,
     MarketingConfig,
 )
-from app.models.leads import Lead, NewsletterSubscriber
+from app.models.leads import Lead, DemoRequest, NewsletterSubscriber
 from app.models.bulk import (
     BulkGenerator,
     WasteLog,
@@ -38,6 +38,7 @@ __all__ = [
     "Badge",
     "UserBadge",
     "TrainingModule",
+    "TrainingLesson",
     "TrainingProgress",
     "Household",
     "SegregationLog",
@@ -67,5 +68,6 @@ __all__ = [
     "MarketingFAQ",
     "MarketingConfig",
     "Lead",
+    "DemoRequest",
     "NewsletterSubscriber",
 ]

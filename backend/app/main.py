@@ -23,6 +23,8 @@ from app.api import segregation as segregation_router
 from app.api import training as training_router
 from app.api import waste_reporting as waste_router
 from app.api.v1 import admin_content as admin_content_router
+from app.api.v1 import admin_demo_requests as admin_demo_requests_router
+from app.api.v1 import admin_training as admin_training_router
 from app.api.v1 import public as public_router
 from app.routers import pcc as pcc_router
 from app.core.database import SessionLocal
@@ -197,6 +199,65 @@ def ensure_pcc_schema_compat() -> None:
             )
         )
         conn.execute(text("ALTER TABLE IF EXISTS contact_messages ADD COLUMN IF NOT EXISTS subject VARCHAR(255) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS audience VARCHAR(32) NOT NULL DEFAULT 'citizen';"))
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS summary TEXT NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS difficulty VARCHAR(32) NOT NULL DEFAULT 'beginner';"))
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS est_minutes INTEGER NOT NULL DEFAULT 10;"))
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS cover_image_url VARCHAR(600) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();"))
+        conn.execute(text("UPDATE training_modules SET summary = COALESCE(summary, description) WHERE summary IS NULL;"))
+        conn.execute(text("UPDATE training_modules SET is_active = COALESCE(is_active, FALSE);"))
+        conn.execute(text("UPDATE training_modules SET is_published = COALESCE(is_published, is_active, FALSE);"))
+
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS training_lessons (
+                    id SERIAL PRIMARY KEY,
+                    module_id INTEGER NOT NULL REFERENCES training_modules(id) ON DELETE CASCADE,
+                    order_index INTEGER NOT NULL DEFAULT 0,
+                    lesson_type VARCHAR(32) NOT NULL DEFAULT 'article',
+                    title VARCHAR(255) NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS demo_requests (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    organization VARCHAR(255) NOT NULL,
+                    org_type VARCHAR(64) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    phone VARCHAR(50) NULL,
+                    message TEXT NULL,
+                    status VARCHAR(32) NOT NULL DEFAULT 'new',
+                    admin_notes TEXT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO demo_requests (name, organization, org_type, email, phone, message, status, created_at)
+                SELECT l.name, l.org_name, l.org_type, l.email, l.phone, l.message, l.status, l.created_at
+                FROM leads l
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM demo_requests d
+                    WHERE d.email = l.email
+                      AND d.organization = l.org_name
+                      AND d.created_at = l.created_at
+                );
+                """
+            )
+        )
 
 
 def seed_marketing_defaults() -> None:
@@ -271,6 +332,8 @@ def create_app() -> FastAPI:
     app.include_router(pcc_router.router, prefix=api_prefix)
     app.include_router(public_router.router, prefix=api_prefix)
     app.include_router(admin_content_router.router, prefix=api_prefix)
+    app.include_router(admin_training_router.router, prefix=api_prefix)
+    app.include_router(admin_demo_requests_router.router, prefix=api_prefix)
 
     return app
 

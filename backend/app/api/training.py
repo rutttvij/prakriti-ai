@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -18,23 +18,25 @@ from app.services.badge_service import (
     award_badge_if_not_awarded,
 )
 from app.services.carbon_service import add_carbon_activity
+from app.services.training_service import get_published_module, list_published_modules
 
 router = APIRouter(prefix="/training", tags=["training"])
 
 
 @router.get("/modules", response_model=List[TrainingModuleRead])
 def list_training_modules(
+    audience: str | None = Query(default=None),
     db: Session = Depends(get_db),
-    current_user=Depends(deps.get_current_user),
 ):
-    # Everyone can view active modules
-    modules = (
-        db.query(TrainingModule)
-        .filter(TrainingModule.is_active == True)  # noqa: E712
-        .order_by(TrainingModule.order_index.asc())
-        .all()
-    )
-    return modules
+    return list_published_modules(db, audience)
+
+
+@router.get("/modules/{module_id}", response_model=TrainingModuleRead)
+def get_training_module(module_id: int, db: Session = Depends(get_db)):
+    module = get_published_module(db, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Training module not found")
+    return module
 
 
 @router.post("/{module_id}/complete", response_model=TrainingProgressRead)
@@ -48,7 +50,6 @@ def complete_training_module(
     if module is None:
         raise HTTPException(status_code=404, detail="Training module not found")
 
-    # Get or create progress record
     progress = (
         db.query(TrainingProgress)
         .filter(
@@ -78,9 +79,6 @@ def complete_training_module(
     db.commit()
     db.refresh(progress)
 
-    # 🔁 SIDE EFFECTS – training completion should still:
-    # - award badges
-    # - add carbon activities (which then mint PCC tokens)
     _handle_training_completion_effects(db, current_user.id, module.id, score)
 
     return progress
@@ -91,10 +89,6 @@ def get_my_training_progress(
     db: Session = Depends(get_db),
     current_user=Depends(deps.get_current_user),
 ):
-    """
-    Return completion records for the current user.
-    This is read-only and does NOT change badges / carbon / tokens.
-    """
     items = (
         db.query(TrainingProgress)
         .filter(TrainingProgress.user_id == current_user.id)
@@ -103,23 +97,12 @@ def get_my_training_progress(
     return items
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
 def _handle_training_completion_effects(
     db: Session,
     user_id: int,
     module_id: int,
     score: float,
 ) -> None:
-    """
-    When a training module is completed:
-      - award a 'Training Completed' badge
-      - add a carbon activity for training (CO2e based on score)
-    """
-    # Badge
     criteria_key = f"training_module_{module_id}_completed"
     create_badge_if_missing(
         db=db,
@@ -135,7 +118,6 @@ def _handle_training_completion_effects(
         criteria_key=criteria_key,
     )
 
-    # Carbon engine – simple mapping: score% of 0.5 kg CO2e
     co2e_kg = 0.5 * (score / 100.0)
     add_carbon_activity(
         db=db,

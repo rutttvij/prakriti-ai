@@ -10,6 +10,8 @@ export default function AdminLayout({ children }: Props) {
     { to: "/admin", label: "Dashboard", end: true },
     { to: "/admin/users", label: "Users & Approvals" },
     { to: "/admin/pcc", label: "PCC Tokens" },
+    { to: "/admin/training", label: "Training Modules" },
+    { to: "/admin/demo-requests", label: "Demo Requests" },
     { to: "/admin/contact", label: "Contact Messages" },
   ];
 

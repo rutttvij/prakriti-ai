@@ -21,6 +21,8 @@ import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminPccAwardPage } from "./pages/admin/AdminPccAwardPage";
 import { AdminContactMessagesPage } from "./pages/admin/AdminContactMessagesPage";
+import AdminTrainingPage from "./pages/admin/AdminTrainingPage";
+import AdminDemoRequestsPage from "./pages/admin/AdminDemoRequestsPage";
 
 /* Worker Pages */
 import WorkerLayout from "./layouts/WorkerLayout";
@@ -42,6 +44,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import CitizenLayout from "./layouts/CitizenLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import { useAuth } from "./contexts/AuthContext";
+import { SuperAdminRoute } from "./components/SuperAdminRoute";
 
 const AdminPccParamRedirect: React.FC = () => {
   const { logId } = useParams();
@@ -270,9 +273,11 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute>
-                <AdminLayout>
-                  <AdminDashboardPage />
-                </AdminLayout>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminDashboardPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
               </ProtectedRoute>
             }
           />
@@ -283,9 +288,11 @@ function App() {
             path="/admin/users"
             element={
               <ProtectedRoute>
-                <AdminLayout>
-                  <AdminUsersPage />
-                </AdminLayout>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminUsersPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
               </ProtectedRoute>
             }
           />
@@ -295,9 +302,11 @@ function App() {
             path="/admin/pcc"
             element={
               <ProtectedRoute>
-                <AdminLayout>
-                  <AdminPccAwardPage />
-                </AdminLayout>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminPccAwardPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
               </ProtectedRoute>
             }
           />
@@ -310,12 +319,43 @@ function App() {
             path="/admin/contact"
             element={
               <ProtectedRoute>
-                <AdminLayout>
-                  <AdminContactMessagesPage />
-                </AdminLayout>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminContactMessagesPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/admin/training"
+            element={
+              <ProtectedRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminTrainingPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/demo-requests"
+            element={
+              <ProtectedRoute>
+                <SuperAdminRoute>
+                  <AdminLayout>
+                    <AdminDemoRequestsPage />
+                  </AdminLayout>
+                </SuperAdminRoute>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/app/admin/training" element={<Navigate to="/admin/training" replace />} />
+          <Route path="/app/admin/demo-requests" element={<Navigate to="/admin/demo-requests" replace />} />
 
           {/* ---------- FALLBACK ---------- */}
           <Route path="*" element={<Navigate to="/" replace />} />

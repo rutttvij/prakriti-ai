@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 from io import StringIO
 from typing import Any
 
@@ -52,6 +52,14 @@ SETTINGS_DEFAULTS = {
     "quality_multipliers": {"low": 0.7, "medium": 1.0, "high": 1.15},
     "feature_flags": {"enable_training_modules": True, "enable_pcc_calculator": True},
 }
+
+
+def _as_utc(dt: datetime | None) -> datetime:
+    if dt is None:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def _setting(db: Session, key: str, default: Any) -> Any:
@@ -119,7 +127,7 @@ def analytics_summary(
                 created_at=row.created_at,
             )
         )
-    activity.sort(key=lambda x: x.created_at, reverse=True)
+    activity.sort(key=lambda x: _as_utc(x.created_at), reverse=True)
 
     return AnalyticsSummaryResponse(
         kpis=AdminKpiSummary(

@@ -1,21 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
-import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
-import { BACKEND_ORIGIN } from "../../lib/config";
-
-function statusStyles(status: WasteReportStatus) {
-  switch (status) {
-    case "OPEN":
-      return "bg-amber-50/80 text-amber-700 border-amber-200 shadow-[0_0_6px_rgba(251,191,36,0.25)]";
-    case "IN_PROGRESS":
-      return "bg-blue-50/80 text-blue-700 border-blue-200 shadow-[0_0_6px_rgba(59,130,246,0.25)]";
-    case "RESOLVED":
-      return "bg-emerald-50/80 text-emerald-700 border-emerald-200 shadow-[0_0_6px_rgba(16,185,129,0.25)]";
-    default:
-      return "bg-slate-50/80 text-slate-700 border-slate-200";
-  }
-}
+import type { WasteReport } from "../../types/wasteReport";
 
 function formatIST(input: string | Date | null | undefined) {
   if (!input) return "";
@@ -28,7 +14,6 @@ function formatIST(input: string | Date | null | undefined) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hour12: false,
   }).format(d);
 }
@@ -36,23 +21,9 @@ function formatIST(input: string | Date | null | undefined) {
 function extractApiError(err: any): string {
   const data = err?.response?.data;
   if (!data) return "Something went wrong.";
-
   if (typeof data?.detail === "string") return data.detail;
-
-  if (Array.isArray(data?.detail)) {
-    const first = data.detail[0];
-    const msg = first?.msg ? String(first.msg) : "Validation error.";
-    const loc = Array.isArray(first?.loc) ? first.loc.join(" → ") : "";
-    return loc ? `${msg} (${loc})` : msg;
-  }
-
   if (typeof data?.message === "string") return data.message;
-
-  try {
-    return JSON.stringify(data);
-  } catch {
-    return "Something went wrong.";
-  }
+  return "Something went wrong.";
 }
 
 export function WorkerAvailableReportsPage() {
@@ -60,7 +31,6 @@ export function WorkerAvailableReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<number | null>(null);
-
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,19 +40,18 @@ export function WorkerAvailableReportsPage() {
         const res = await api.get<WasteReport[]>("/waste/reports/available");
         setReports(res.data);
       } catch (err) {
-        console.error(err);
         setError(extractApiError(err) || "Failed to load available reports.");
       } finally {
         setLoading(false);
       }
     }
-    load();
+    void load();
   }, []);
 
-  function buildImageUrl(imagePath: string) {
-    if (imagePath.startsWith("http")) return imagePath;
-    return `${BACKEND_ORIGIN}/${imagePath.replace(/^\/+/, "")}`;
-  }
+  const withCoords = useMemo(
+    () => reports.filter((r) => typeof r.latitude === "number" && typeof r.longitude === "number").length,
+    [reports]
+  );
 
   async function handleClaim(reportId: number) {
     try {
@@ -90,10 +59,8 @@ export function WorkerAvailableReportsPage() {
       setClaimingId(reportId);
       const res = await api.post(`/waste/reports/${reportId}/claim`);
       const claimed = res.data;
-
       setReports((prev) => prev.filter((r) => r.id !== claimed.id));
     } catch (err: any) {
-      console.error(err);
       setError(extractApiError(err) || "Could not claim this report.");
     } finally {
       setClaimingId(null);
@@ -102,15 +69,12 @@ export function WorkerAvailableReportsPage() {
 
   function handleLogSegregation(report: WasteReport) {
     setError(null);
-
     if (!report.household_id) {
       setError("This report is not linked to a household yet.");
       return;
     }
 
-    const code = report.public_id
-      ? report.public_id
-      : `CIT-${report.id.toString().padStart(3, "0")}`;
+    const code = report.public_id ? report.public_id : `CIT-${report.id.toString().padStart(3, "0")}`;
 
     navigate(
       `/worker/segregation?householdId=${report.household_id}` +
@@ -119,146 +83,95 @@ export function WorkerAvailableReportsPage() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="animate-pulse text-slate-600 text-sm">
-        Loading available reports…
-      </div>
-    );
-  }
-
   return (
-    <div className="relative space-y-6">
-      <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
-
-      <header className="relative z-10 space-y-1">
-        <h1 className="text-2xl font-bold text-emerald-900">
-          Available Reports
-        </h1>
-        <p className="text-sm text-slate-600">
-          These are open reports that do not yet have a worker.
-          <br /> Claim one to start working on it.
-        </p>
-      </header>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 shadow-sm">
-          {error}
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Waste Worker · Available Reports
         </div>
-      )}
+        <h1 className="mt-3 text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Available Reports</h1>
+        <p className="mt-1 text-sm text-emerald-100">Claim open reports and move them into your active execution queue.</p>
+      </section>
 
-      {reports.length === 0 && !error && (
-        <div
-          className="
-            rounded-2xl border border-emerald-100 bg-white/70
-            p-6 text-center text-slate-600 shadow-md shadow-emerald-100/50
-            backdrop-blur-sm
-          "
-        >
-          No unassigned reports right now!
-          <br />
-          <span className="text-emerald-700 font-medium">
-            Great job keeping the city clean 🌿
-          </span>
+      <section className="surface-card-strong rounded-[1.8rem] px-5 py-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <p className="text-xs text-slate-500">Open reports</p>
+            <p className="mt-1 text-4xl font-semibold text-slate-900">{loading ? "--" : reports.length}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">With coordinates</p>
+            <p className="mt-1 text-4xl font-semibold text-slate-900">{loading ? "--" : withCoords}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Without coordinates</p>
+            <p className="mt-1 text-4xl font-semibold text-slate-900">{loading ? "--" : Math.max(reports.length - withCoords, 0)}</p>
+          </div>
         </div>
-      )}
+      </section>
 
-      <div className="space-y-4">
-        {reports.map((r) => {
-          const created = formatIST(r.created_at);
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-          return (
-            <div
-              key={r.id}
-              className="
-                group relative flex flex-col gap-4 rounded-3xl
-                border border-emerald-100/70 bg-white/70
-                p-5 shadow-lg shadow-emerald-100/50
-                backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-emerald-200/70
-                md:flex-row md:items-center
-              "
-            >
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-sm font-semibold text-slate-900">
-                    {r.public_id ? `Report ${r.public_id}` : `Report #${r.id}`}
-                  </h2>
-
-                  <span
-                    className={`
-                      inline-flex items-center rounded-full border px-3 py-0.5
-                      text-[0.7rem] font-medium
-                      ${statusStyles(r.status)}
-                    `}
-                  >
-                    {r.status.replace("_", " ")}
-                  </span>
-                </div>
-
-                {r.description && (
-                  <p className="text-sm text-slate-700">{r.description}</p>
-                )}
-
-                <p className="text-xs text-slate-500">
-                  Created: {created}
-                  {r.latitude && r.longitude && (
-                    <>
-                      {" • "}
-                      Location: {r.latitude.toFixed(5)}, {r.longitude.toFixed(5)}
-                    </>
-                  )}
-                </p>
-              </div>
-
-              {r.image_path && (
-                <div className="w-full md:w-44 flex-shrink-0">
-                  <div
-                    className="
-                      relative overflow-hidden rounded-2xl border border-emerald-100
-                      bg-white/60 shadow-inner shadow-emerald-100/40
-                      backdrop-blur-sm aspect-video
-                    "
-                  >
-                    <img
-                      src={buildImageUrl(r.image_path)}
-                      alt={`Waste report ${r.id}`}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                </div>
+      <section className="surface-card-strong rounded-[1.8rem] px-5 py-4">
+        <h2 className="mb-3 text-4xl font-semibold text-slate-900">{reports.length} reports in view</h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-emerald-100 text-xs uppercase tracking-[0.12em] text-slate-500">
+                <th className="px-3 py-2 text-left">Report</th>
+                <th className="px-3 py-2 text-left">Description</th>
+                <th className="px-3 py-2 text-left">Created</th>
+                <th className="px-3 py-2 text-left">Location</th>
+                <th className="px-3 py-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-center text-slate-500">Loading available reports...</td>
+                </tr>
+              ) : reports.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-center text-slate-500">No unassigned reports right now.</td>
+                </tr>
+              ) : (
+                reports.map((r) => (
+                  <tr key={r.id} className="border-b border-emerald-100/70">
+                    <td className="px-3 py-2 text-slate-900">
+                      {r.public_id || `Report #${r.id}`}
+                      <div className="text-xs text-slate-500">{r.status.replaceAll("_", " ")}</div>
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">{r.description || "-"}</td>
+                    <td className="px-3 py-2 text-slate-700">{formatIST(r.created_at) || "-"}</td>
+                    <td className="px-3 py-2 text-slate-700">
+                      {typeof r.latitude === "number" && typeof r.longitude === "number"
+                        ? `${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}`
+                        : "Not provided"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleClaim(r.id)}
+                          disabled={claimingId === r.id}
+                          className="btn-primary px-3 py-1 text-xs"
+                        >
+                          {claimingId === r.id ? "Claiming..." : "Claim"}
+                        </button>
+                        {!!r.household_id && (
+                          <button className="btn-secondary px-3 py-1 text-xs" onClick={() => handleLogSegregation(r)}>
+                            Log Segregation
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-
-              <div className="flex flex-col items-stretch md:items-end md:w-44 gap-2">
-                <button
-                  onClick={() => handleClaim(r.id)}
-                  disabled={claimingId === r.id}
-                  className="
-                    rounded-full bg-emerald-600 px-5 py-2
-                    text-sm font-medium text-white shadow-md shadow-emerald-400/40
-                    hover:bg-emerald-700 transition disabled:opacity-60
-                  "
-                >
-                  {claimingId === r.id ? "Claiming…" : "Accept Job"}
-                </button>
-
-                {r.household_id && (
-                  <button
-                    type="button"
-                    onClick={() => handleLogSegregation(r)}
-                    className="
-                      rounded-full border border-emerald-100 bg-emerald-50/70 px-5 py-2
-                      text-xs font-medium text-emerald-800 hover:bg-emerald-100
-                      transition
-                    "
-                  >
-                    Log segregation for this site
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

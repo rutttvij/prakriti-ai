@@ -350,44 +350,45 @@ const RegisterPage: React.FC = () => {
         {/* Right: glassy registration form */}
         <section
           className="
-            surface-card-strong mx-auto w-full max-w-2xl p-5 sm:p-6
-            max-h-[88vh] overflow-y-auto
+            surface-card-strong mx-auto w-full max-w-2xl p-3 sm:p-4
+            max-h-[88vh] overflow-hidden
           "
         >
-          <p className="mb-3 text-center text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-emerald-700 lg:hidden">
-            Civic Intelligence Platform
-          </p>
-          <div className="mb-4 flex items-center justify-center">
-            <div className="h-12 w-12 overflow-hidden rounded-2xl shadow-md shadow-emerald-300/60">
-              <img
-                src={logo}
-                alt="Prakriti.AI logo"
-                className="h-full w-full scale-[1.28] object-cover object-center"
-              />
+          <div className="admin-scrollbar admin-scrollbar-inset max-h-[calc(88vh-2rem)] overflow-y-auto overflow-x-hidden px-2 pb-2 sm:px-3">
+            <p className="mb-3 text-center text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-emerald-700 lg:hidden">
+              Civic Intelligence Platform
+            </p>
+            <div className="mb-4 flex items-center justify-center">
+              <div className="h-12 w-12 overflow-hidden rounded-2xl shadow-md shadow-emerald-300/60">
+                <img
+                  src={logo}
+                  alt="Prakriti.AI logo"
+                  className="h-full w-full scale-[1.28] object-cover object-center"
+                />
+              </div>
             </div>
-          </div>
-          {/* Role pills */}
-          <div className="mb-4 flex flex-wrap gap-2">
-            {(["CITIZEN", "WASTE_WORKER", "BULK_GENERATOR"] as Role[]).map(
-              (r) => {
-                const active = r === role;
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                      active
-                        ? "border-slate-900 bg-slate-900 text-white shadow-[0_10px_20px_rgba(15,23,42,0.28)]"
-                        : "border-emerald-100 bg-white/80 text-emerald-800 hover:bg-white"
-                    }`}
-                  >
-                    {roleLabel(r)}
-                  </button>
-                );
-              }
-            )}
-          </div>
+            {/* Role pills */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              {(["CITIZEN", "WASTE_WORKER", "BULK_GENERATOR"] as Role[]).map(
+                (r) => {
+                  const active = r === role;
+                  return (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                        active
+                          ? "border-slate-900 bg-slate-900 text-white shadow-[0_10px_20px_rgba(15,23,42,0.28)]"
+                          : "border-emerald-100 bg-white/80 text-emerald-800 hover:bg-white"
+                      }`}
+                    >
+                      {roleLabel(r)}
+                    </button>
+                  );
+                }
+              )}
+            </div>
 
           <p className="text-[0.7rem] text-slate-500 mb-3">
             You’re registering as{" "}
@@ -509,12 +510,13 @@ const RegisterPage: React.FC = () => {
             </button>
           </form>
 
-          <p className="mt-3 text-center text-xs text-slate-600">
-            Already registered?{" "}
-            <Link to="/auth/login" className="font-semibold text-emerald-700 hover:text-emerald-800">
-              Sign in
-            </Link>
-          </p>
+            <p className="mt-3 text-center text-xs text-slate-600">
+              Already registered?{" "}
+              <Link to="/auth/login" className="font-semibold text-emerald-700 hover:text-emerald-800">
+                Sign in
+              </Link>
+            </p>
+          </div>
         </section>
       </div>
     </main>

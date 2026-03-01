@@ -29,6 +29,8 @@ import ContentManagementPage from "./pages/admin/ContentManagement";
 import ReportsPage from "./pages/admin/Reports";
 import AuditLogsPage from "./pages/admin/AuditLogs";
 import PlatformSettingsPage from "./pages/admin/PlatformSettings";
+import CitizenSegregationLogsPage from "./pages/admin/CitizenSegregationLogs";
+import BulkGeneratorLogsPage from "./pages/admin/BulkGeneratorLogs";
 
 /* Worker Pages */
 import WorkerLayout from "./layouts/WorkerLayout";
@@ -195,6 +197,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/citizen/my-reports"
+            element={
+              <ProtectedRoute>
+                <CitizenLayout>
+                  <CitizenMyReportsPage />
+                </CitizenLayout>
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/citizen/household"
@@ -332,6 +344,14 @@ function App() {
           <Route
             path="/app/admin/platform-settings"
             element={<ProtectedRoute><SuperAdminRoute><AdminLayout><PlatformSettingsPage /></AdminLayout></SuperAdminRoute></ProtectedRoute>}
+          />
+          <Route
+            path="/app/admin/citizen-segregation-logs"
+            element={<ProtectedRoute><SuperAdminRoute><AdminLayout><CitizenSegregationLogsPage /></AdminLayout></SuperAdminRoute></ProtectedRoute>}
+          />
+          <Route
+            path="/app/admin/bulk-generator-logs"
+            element={<ProtectedRoute><SuperAdminRoute><AdminLayout><BulkGeneratorLogsPage /></AdminLayout></SuperAdminRoute></ProtectedRoute>}
           />
 
           {/* ---------- FALLBACK ---------- */}

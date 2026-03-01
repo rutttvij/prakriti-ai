@@ -1,501 +1,307 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
-import api from "../../lib/api";
-import { useAuth } from "../../contexts/AuthContext";
-import type { Household } from "../../types/household";
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import CitizenPageHero from "../../components/citizen/CitizenPageHero";
+import {
+  createCitizenHousehold,
+  fetchCitizenHouseholds,
+  linkCitizenHousehold,
+  makeCitizenHouseholdPrimary,
+  updateCitizenHousehold,
+} from "../../lib/api";
+import type { CitizenHousehold } from "../../lib/types";
 
-type SelectedId = number | "new" | null;
+type Mode = "create" | "edit";
 
-function sortHouseholds(households: Household[]) {
-  return [...households].sort((a, b) => {
-    if (a.is_primary === b.is_primary) {
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    }
-    return a.is_primary ? -1 : 1; // primary first
-  });
-}
+const EMPTY_FORM = {
+  name: "",
+  city: "",
+  ward_zone: "",
+  address: "",
+  pincode: "",
+};
 
 export default function CitizenHouseholdPage() {
-  const { user } = useAuth();
-
-  // Restrict to citizens only
-  if (user && user.role !== "CITIZEN") {
-    return (
-      <div className="min-h-[60vh] bg-gradient-to-b from-emerald-50/70 to-white flex items-center -m-4 p-4 md:p-6">
-        <div className="max-w-xl mx-auto rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-6">
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-3">
-            Household profile
-          </span>
-          <h1 className="text-2xl font-semibold text-emerald-900 mb-2">
-            Citizens only
-          </h1>
-          <p className="text-sm text-slate-600">
-            This page is meant for{" "}
-            <span className="font-semibold text-emerald-800">citizens</span> to
-            manage their home address and link to a household. Please switch to
-            a citizen account if you think this is a mistake.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const [households, setHouseholds] = useState<Household[]>([]);
+  const [items, setItems] = useState<CitizenHousehold[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // Form state for create/update
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [ward, setWard] = useState("");
-  const [city, setCity] = useState("");
-  const [pincode, setPincode] = useState("");
+  const [mode, setMode] = useState<Mode>("create");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [makePrimary, setMakePrimary] = useState(true);
+  const [linkHouseholdId, setLinkHouseholdId] = useState("");
 
-  const [saving, setSaving] = useState(false);
+  const primary = useMemo(() => items.find((x) => x.is_primary) ?? null, [items]);
 
-  // Link by ID
-  const [linkId, setLinkId] = useState("");
-  const [linking, setLinking] = useState(false);
-
-  // Which household are we editing? (or "new" for create)
-  const [selectedId, setSelectedId] = useState<SelectedId>("new");
-
-  const primaryHousehold = useMemo(
-    () => households.find((h) => h.is_primary) ?? null,
-    [households]
-  );
-
-  async function loadHouseholds() {
+  const load = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const res = await api.get<Household[]>("/segregation/households/me");
-      const sorted = sortHouseholds(res.data);
-      setHouseholds(sorted);
-
-      if (sorted.length > 0) {
-        const primary = sorted.find((h) => h.is_primary) ?? sorted[0];
-        setSelectedId(primary.id);
-        setName(primary.name ?? "");
-        setAddress(primary.address ?? "");
-        setWard(primary.ward ?? "");
-        setCity(primary.city ?? "");
-        setPincode(primary.pincode ?? "");
+      const data = await fetchCitizenHouseholds();
+      setItems(data);
+      if (data.length > 0) {
+        const initial = data.find((x) => x.is_primary) ?? data[0];
+        setMode("edit");
+        setSelectedId(initial.id);
+        setForm({
+          name: initial.name || "",
+          city: initial.city || "",
+          ward_zone: initial.ward_zone || "",
+          address: initial.address || "",
+          pincode: initial.pincode || "",
+        });
+        setMakePrimary(Boolean(initial.is_primary));
       } else {
-        // No households yet – show blank create form
-        setSelectedId("new");
-        setName("");
-        setAddress("");
-        setWard("");
-        setCity("");
-        setPincode("");
+        setMode("create");
+        setSelectedId(null);
+        setForm(EMPTY_FORM);
+        setMakePrimary(true);
       }
-    } catch (err) {
-      console.error(err);
-      setError("Could not load your household information.");
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || "Failed to load households.");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  // Load households on mount
   useEffect(() => {
-    loadHouseholds();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void load();
   }, []);
 
-  function resetFormForNew() {
-    setSelectedId("new");
-    setName("");
-    setAddress("");
-    setWard("");
-    setCity("");
-    setPincode("");
-  }
+  const selectItem = (item: CitizenHousehold) => {
+    setMode("edit");
+    setSelectedId(item.id);
+    setForm({
+      name: item.name || "",
+      city: item.city || "",
+      ward_zone: item.ward_zone || "",
+      address: item.address || "",
+      pincode: item.pincode || "",
+    });
+    setMakePrimary(Boolean(item.is_primary));
+  };
 
-  function fillFormFromHousehold(h: Household) {
-    setName(h.name ?? "");
-    setAddress(h.address ?? "");
-    setWard(h.ward ?? "");
-    setCity(h.city ?? "");
-    setPincode(h.pincode ?? "");
-  }
-
-  async function handleSave(e: FormEvent) {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
+    setSuccess(null);
     setError(null);
-
-    if (!name.trim()) {
-      setError("Please add a name for your home or building.");
+    if (!form.name.trim() || !form.city.trim()) {
+      setError("Name and city are required.");
       return;
     }
-
-    const payload = {
-      name: name.trim(),
-      address: address.trim() || undefined,
-      ward: ward.trim() || undefined,
-      city: city.trim() || undefined,
-      pincode: pincode.trim() || undefined,
-      is_bulk_generator: false,
-      // Let backend auto-decide primary; we don't force it here
-      // is_primary: households.length === 0 ? true : undefined,
-    };
-
+    setSubmitting(true);
     try {
-      setSaving(true);
-
-      let res;
-      if (typeof selectedId === "number") {
-        // Update existing household
-        res = await api.put<Household>(
-          `/segregation/households/${selectedId}`,
-          payload
-        );
-      } else {
-        // Create new household
-        res = await api.post<Household>("/segregation/households", payload);
+      if (mode === "create") {
+        const created = await createCitizenHousehold({
+          ...form,
+          name: form.name.trim(),
+          city: form.city.trim(),
+          make_primary: makePrimary,
+        });
+        if (makePrimary && !created.is_primary) {
+          await makeCitizenHouseholdPrimary(created.id);
+        }
+        setSuccess("Household created.");
+      } else if (selectedId) {
+        await updateCitizenHousehold(selectedId, {
+          ...form,
+          name: form.name.trim(),
+          city: form.city.trim(),
+        });
+        if (makePrimary) {
+          await makeCitizenHouseholdPrimary(selectedId);
+        }
+        setSuccess("Household updated.");
       }
-
-      setHouseholds((prev) => {
-        const others = prev.filter((h) => h.id !== res.data.id);
-        return sortHouseholds([res.data, ...others]);
-      });
-
-      setSelectedId(res.data.id);
-    } catch (err) {
-      console.error(err);
-      setError("Could not save your household. Please try again.");
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || "Could not save household.");
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
-  }
+  };
 
-  async function handleLink(e: FormEvent) {
+  const handleLink = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    const idNum = Number(linkId);
-    if (!idNum || Number.isNaN(idNum)) {
-      setError("Please enter a valid household ID.");
+    setSuccess(null);
+    const id = Number(linkHouseholdId);
+    if (!id) {
+      setError("Enter a valid household ID.");
       return;
     }
-
+    setSubmitting(true);
     try {
-      setLinking(true);
-      const res = await api.post<Household>("/segregation/households/link", {
-        household_id: idNum,
-      });
-
-      setHouseholds((prev) => {
-        const others = prev.filter((h) => h.id !== res.data.id);
-        return sortHouseholds([res.data, ...others]);
-      });
-
-      setSelectedId(res.data.id);
-      fillFormFromHousehold(res.data);
-      setLinkId("");
-    } catch (err: any) {
-      console.error(err);
-      const message =
-        (err?.response?.data?.detail as string | undefined) ||
-        "Could not link this household. Please check the ID and try again.";
-      setError(message);
+      await linkCitizenHousehold(id);
+      setLinkHouseholdId("");
+      setSuccess("Household linked.");
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || "Could not link household.");
     } finally {
-      setLinking(false);
+      setSubmitting(false);
     }
-  }
-
-  async function handleMakePrimary(id: number) {
-    try {
-      setError(null);
-      await api.post<Household>(
-        `/segregation/households/${id}/make-primary`,
-        {}
-      );
-      await loadHouseholds();
-      setSelectedId(id);
-    } catch (err) {
-      console.error(err);
-      setError("Could not set this household as primary. Please try again.");
-    }
-  }
-
-  function handleSelectHousehold(id: number) {
-    const h = households.find((hh) => hh.id === id);
-    if (!h) return;
-    setSelectedId(id);
-    fillFormFromHousehold(h);
-  }
+  };
 
   return (
-    <div className="min-h-[70vh] bg-gradient-to-b from-emerald-50/70 to-white -m-4 p-4 md:p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header */}
-        <div>
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-2">
-            Citizen · Home & Household
-          </span>
-          <h1 className="text-2xl md:text-3xl font-semibold text-emerald-900">
-            Your home profile
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 max-w-2xl">
-            Link your account to your home, office, or other locations so we can
-            show you segregation quality, PCC rewards, and community impact for
-            your exact places.
-          </p>
-        </div>
+    <div className="space-y-5">
+      <CitizenPageHero
+        badge="CITIZEN · HOME"
+        title="Home & household"
+        subtitle="Manage your household locations, link existing IDs, and set the primary household for reporting and segregation insights."
+      />
 
-        {/* Main grid */}
-        <div className="grid gap-5 lg:grid-cols-[1.2fr,1fr]">
-          {/* Address form */}
-          <form
-            onSubmit={handleSave}
-            className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5 space-y-4"
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold text-emerald-900">
-                  {typeof selectedId === "number"
-                    ? "Edit household / location"
-                    : "Add a new household / location"}
-                </h2>
-                {!loading && primaryHousehold && (
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Primary household:{" "}
-                    <span className="font-medium text-emerald-800">
-                      {primaryHousehold.name}
-                    </span>
-                  </p>
-                )}
-              </div>
+      <div className="grid gap-4 lg:grid-cols-[1.2fr,1fr]">
+        <form onSubmit={handleSave} className="surface-card-strong rounded-3xl p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-slate-900">{mode === "create" ? "Add household" : "Edit household"}</h2>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setMode("create");
+                setSelectedId(null);
+                setForm(EMPTY_FORM);
+                setMakePrimary(items.length === 0);
+              }}
+            >
+              Add new location
+            </button>
+          </div>
 
-              <button
-                type="button"
-                onClick={resetFormForNew}
-                className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition"
-              >
-                + Add new location
+          <div className="grid gap-3 md:grid-cols-2">
+            <input
+              className="rounded-xl border border-white/40 bg-white/55 px-3 py-2 text-sm"
+              placeholder="Name"
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            />
+            <input
+              className="rounded-xl border border-white/40 bg-white/55 px-3 py-2 text-sm"
+              placeholder="City"
+              value={form.city}
+              onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+            />
+            <input
+              className="rounded-xl border border-white/40 bg-white/55 px-3 py-2 text-sm"
+              placeholder="Ward / Zone"
+              value={form.ward_zone}
+              onChange={(e) => setForm((p) => ({ ...p, ward_zone: e.target.value }))}
+            />
+            <input
+              className="rounded-xl border border-white/40 bg-white/55 px-3 py-2 text-sm"
+              placeholder="Pincode"
+              value={form.pincode}
+              onChange={(e) => setForm((p) => ({ ...p, pincode: e.target.value }))}
+            />
+          </div>
+
+          <textarea
+            rows={3}
+            className="w-full rounded-xl border border-white/40 bg-white/55 px-3 py-2 text-sm"
+            placeholder="Address"
+            value={form.address}
+            onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
+          />
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={makePrimary} onChange={(e) => setMakePrimary(e.target.checked)} />
+            Make primary
+          </label>
+
+          {error && <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+          {success && <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</div>}
+
+          <button type="submit" className="btn-primary" disabled={submitting || loading}>
+            {submitting ? "Saving..." : mode === "create" ? "Create household" : "Save changes"}
+          </button>
+        </form>
+
+        <div className="space-y-4">
+          <form onSubmit={handleLink} className="surface-card-strong rounded-3xl p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-slate-900">Link existing household</h3>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                className="w-full rounded-xl border border-white/40 bg-white/55 px-3 py-2 text-sm"
+                placeholder="Household ID"
+                value={linkHouseholdId}
+                onChange={(e) => setLinkHouseholdId(e.target.value)}
+              />
+              <button type="submit" className="btn-secondary" disabled={submitting}>
+                Link
               </button>
             </div>
-
-            {loading ? (
-              <p className="text-sm text-slate-600">Loading your details…</p>
-            ) : (
-              <>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Name of home / building
-                    </label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                      placeholder="e.g. Green Residency A-103"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Ward / zone
-                    </label>
-                    <input
-                      type="text"
-                      value={ward}
-                      onChange={(e) => setWard(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                      placeholder="Ward 1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    Address / landmark
-                  </label>
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    rows={2}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                    placeholder="Street, building, nearby landmark…"
-                  />
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                      placeholder="Demo City"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Pincode
-                    </label>
-                    <input
-                      type="text"
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                      placeholder="123456"
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-                    {error}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-between gap-3 pt-1">
-                  <p className="text-[11px] text-slate-500">
-                    Your addresses help create anonymized climate insights for
-                    your ward. They aren&apos;t shared publicly.
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="inline-flex items-center rounded-full bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                  >
-                    {saving
-                      ? "Saving…"
-                      : typeof selectedId === "number"
-                      ? "Save changes"
-                      : "Save household"}
-                  </button>
-                </div>
-              </>
-            )}
           </form>
 
-          {/* Right column: link + summary */}
-          <div className="space-y-4">
-            {/* Link existing household */}
-            <form
-              onSubmit={handleLink}
-              className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5 space-y-3"
-            >
-              <h2 className="text-sm font-semibold text-emerald-900">
-                Already have a household ID?
-              </h2>
-              <p className="text-xs text-slate-600">
-                Some apartments or societies are pre-registered by the city. If
-                your building has a{" "}
-                <span className="font-medium text-emerald-800">
-                  Household ID
-                </span>{" "}
-                shared on notice boards or bills, enter it here to link instead
-                of creating a duplicate.
-              </p>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={linkId}
-                  onChange={(e) => setLinkId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
-                  placeholder="Enter household ID"
-                />
-                <button
-                  type="submit"
-                  disabled={linking}
-                  className="inline-flex items-center rounded-full bg-emerald-50 px-4 py-2 text-xs font-medium text-emerald-800 border border-emerald-100 hover:bg-emerald-100 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                >
-                  {linking ? "Linking…" : "Link"}
-                </button>
-              </div>
-            </form>
-
-            {/* Small summary card */}
-            <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white shadow-sm p-5">
-              <h3 className="text-sm font-semibold text-emerald-900 mb-1">
-                What happens next?
-              </h3>
-              <ul className="mt-2 space-y-1.5 text-xs text-emerald-900">
-                <li>• Your waste worker can log segregation for these locations.</li>
-                <li>
-                  • You&apos;ll soon see weekly segregation scores and PCC
-                  earned.
-                </li>
-                <li>
-                  • Your data contributes to anonymized climate stats for your
-                  ward.
-                </li>
-              </ul>
-            </div>
+          <div className="surface-card-strong rounded-3xl p-5">
+            <p className="text-xs text-slate-500">Primary household</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900">{primary?.name || "Not set"}</p>
+            <p className="text-sm text-slate-600">{primary?.city || ""} {primary?.ward_zone ? `· ${primary.ward_zone}` : ""}</p>
           </div>
         </div>
+      </div>
 
-        {/* All linked households list */}
-        {households.length > 0 && (
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-emerald-900 mb-2">
-              Your linked locations
-            </h2>
-            <p className="text-[11px] text-slate-500 mb-3">
-              Click a location to edit it or set which one is your primary home.
-            </p>
-            <div className="space-y-2 text-sm">
-              {households.map((h) => {
-                const isSelected = typeof selectedId === "number" && selectedId === h.id;
-                return (
-                  <div
-                    key={h.id}
-                    className={[
-                      "flex items-center justify-between rounded-xl border px-3 py-2 transition-colors cursor-pointer",
-                      isSelected
-                        ? "border-emerald-300 bg-emerald-50/70"
-                        : "border-emerald-50 bg-emerald-50/40 hover:bg-emerald-50",
-                    ].join(" ")}
-                    onClick={() => handleSelectHousehold(h.id)}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-emerald-900">{h.name}</p>
-                        {h.is_primary && (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-                            Primary
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-600">
-                        {h.address || "No address"}{" "}
-                        {h.ward && <>· {h.ward}</>}{" "}
-                        {h.city && <>· {h.city}</>}
-                      </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        ID: {h.id}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {!h.is_primary && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMakePrimary(h.id);
-                          }}
-                          className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50"
-                        >
-                          Make primary
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+      <div className="surface-card-strong rounded-3xl p-5">
+        <h3 className="text-xl font-semibold text-slate-900">{loading ? "Loading..." : `${items.length} household${items.length === 1 ? "" : "s"} in view`}</h3>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-[0.16em] text-slate-500">
+                <th className="py-2">Name</th>
+                <th>City</th>
+                <th>Ward</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className="border-t border-white/50">
+                  <td className="py-3 font-medium text-slate-900">{item.name}</td>
+                  <td>{item.city || "-"}</td>
+                  <td>{item.ward_zone || "-"}</td>
+                  <td>
+                    <span className={`rounded-full px-2 py-1 text-xs ${item.is_primary ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>
+                      {item.is_primary ? "Primary" : "Linked"}
+                    </span>
+                  </td>
+                  <td className="space-x-2">
+                    <button type="button" className="btn-secondary" onClick={() => selectItem(item)}>
+                      Edit
+                    </button>
+                    {!item.is_primary && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={async () => {
+                          try {
+                            await makeCitizenHouseholdPrimary(item.id);
+                            await load();
+                            setSuccess("Primary household updated.");
+                          } catch (e: any) {
+                            setError(e?.response?.data?.detail || "Could not set primary household.");
+                          }
+                        }}
+                      >
+                        Make primary
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {!loading && items.length === 0 && (
+                <tr>
+                  <td className="py-6 text-sm text-slate-500" colSpan={5}>
+                    No households yet. Add your first location to continue.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

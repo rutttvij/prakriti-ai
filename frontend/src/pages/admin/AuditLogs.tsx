@@ -45,7 +45,7 @@ export default function AuditLogsPage() {
       </section>
 
       <section className="surface-card-strong rounded-3xl p-4 sm:p-5">
-        <div className="overflow-x-auto">
+        <div className="admin-scrollbar max-h-[68vh] overflow-auto pr-1">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-emerald-100 text-xs uppercase tracking-[0.12em] text-slate-500">

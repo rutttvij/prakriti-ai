@@ -185,10 +185,13 @@ def create_waste_log(
         log = WasteLog(
             bulk_generator_id=bulk.id,
             created_by_user_id=current_user.id,
+            user_id=current_user.id,
             category=category,
             weight_kg=weight_kg,
             photo_path=photo_path,
             notes=notes,
+            verification_status="pending",
+            pcc_status="pending",
             status=WasteLogStatus.LOGGED,
         )
         db.add(log)
@@ -334,6 +337,10 @@ def verify_waste_log(
         db.add(verification)
 
         waste_log.status = WasteLogStatus.VERIFIED
+        waste_log.verification_status = "verified"
+        waste_log.quality_level = "high" if float(verification.quality_score or 0) >= 1.05 else "medium"
+        if not waste_log.pcc_status:
+            waste_log.pcc_status = "pending"
         db.add(waste_log)
 
         wallet = db.query(Wallet).filter(Wallet.bulk_generator_id == waste_log.bulk_generator_id).first()
@@ -347,25 +354,8 @@ def verify_waste_log(
             db.add(wallet)
             db.flush()
 
-        wallet.balance_points += points
-        wallet.lifetime_credited += points
         db.add(wallet)
         db.flush()
-
-        tx = Transaction(
-            wallet_id=wallet.id,
-            verification_id=verification.id,
-            tx_type=TransactionType.CREDIT,
-            status=TransactionStatus.COMPLETED,
-            amount_points=points,
-            description=f"Credits for verified waste log #{waste_log.id}",
-            meta_json={
-                "waste_log_id": waste_log.id,
-                "verified_weight_kg": verified_weight_kg,
-                "carbon_saved_kg": carbon_saved,
-            },
-        )
-        db.add(tx)
 
         if pickup_request:
             pickup_request.status = PickupRequestStatus.PICKED_UP

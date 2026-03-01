@@ -1,7 +1,7 @@
 from app.models.user import User, UserRole
 from app.models.badge import Badge, UserBadge
 from app.models.training import TrainingModule, TrainingProgress, TrainingLesson
-from app.models.household import Household, SegregationLog
+from app.models.household import Household, HouseholdMember, SegregationLog
 from app.models.waste_report import WasteReport
 from app.models.facility import Facility
 from app.models.carbon import CarbonActivity
@@ -31,6 +31,7 @@ from app.models.bulk import (
 )
 from app.models.pcc import EmissionFactor, CarbonLedger
 from app.models.admin_ops import Zone, WorkforceAssignment, AuditLog, PlatformSetting
+from app.models.notification import Notification
 
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "TrainingLesson",
     "TrainingProgress",
     "Household",
+    "HouseholdMember",
     "SegregationLog",
     "WasteReport",
     "Facility",
@@ -67,6 +69,7 @@ __all__ = [
     "WorkforceAssignment",
     "AuditLog",
     "PlatformSetting",
+    "Notification",
     "MarketingPartner",
     "MarketingTestimonial",
     "MarketingCaseStudy",

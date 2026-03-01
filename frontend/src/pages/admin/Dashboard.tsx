@@ -203,7 +203,10 @@ export default function DashboardPage() {
             <h2 className="text-sm font-semibold text-slate-900">Recent segregation logs</h2>
             <p className="mt-1 text-[0.7rem] text-slate-500">Review scores and award PCC to citizens.</p>
           </div>
-          <Link to="/app/admin/pcc-tokens" className="rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1.5 text-[0.7rem] font-semibold text-emerald-800">View all</Link>
+          <div className="flex items-center gap-2">
+            <Link to="/app/admin/citizen-segregation-logs" className="rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1.5 text-[0.7rem] font-semibold text-emerald-800">Citizen logs</Link>
+            <Link to="/app/admin/bulk-generator-logs" className="rounded-full border border-emerald-200/45 bg-emerald-50/70 px-3 py-1.5 text-[0.7rem] font-semibold text-emerald-800">Bulk logs</Link>
+          </div>
         </div>
 
         <div className="mt-3 overflow-x-auto">

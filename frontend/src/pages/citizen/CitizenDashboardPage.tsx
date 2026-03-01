@@ -1,370 +1,142 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
-import { fetchCitizenSummary, type CitizenSummary } from "../../lib/api";
+import CitizenPageHero from "../../components/citizen/CitizenPageHero";
+import {
+  fetchCitizenPccSummary,
+  fetchCitizenSummary,
+  fetchCitizenTrainingSummary,
+  fetchCitizenWasteReports,
+} from "../../lib/api";
+import type { CitizenPccSummary, CitizenTrainingSummary } from "../../lib/types";
 
-const DEFAULT_SUMMARY: CitizenSummary = {
-  training: {
-    completed_modules: 0,
-    total_modules: 0,
-    badges_earned: 0,
-    next_module_title: null,
-  },
-  segregation: {
-    today_status: "UNKNOWN",
-    today_score: null,
-    streak_days: 0,
-  },
-  reports: {
-    total: 0,
-    pending: 0,
-    resolved: 0,
-  },
-  carbon: {
-    co2_saved_kg: 0,
-    pcc_tokens: 0,
-  },
+const EMPTY_PCC: CitizenPccSummary = {
+  total_credited: 0,
+  total_debited: 0,
+  net_pcc: 0,
+  co2_saved_kg: 0,
 };
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
-function statusPill(status: CitizenSummary["segregation"]["today_status"]) {
-  switch (status) {
-    case "DONE":
-      return {
-        label: "Done today",
-        cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      };
-    case "PENDING":
-      return {
-        label: "Pending today",
-        cls: "bg-amber-50 text-amber-700 border-amber-200",
-      };
-    case "MISSED":
-      return {
-        label: "Missed today",
-        cls: "bg-rose-50 text-rose-700 border-rose-200",
-      };
-    default:
-      return {
-        label: "Unknown",
-        cls: "bg-slate-50 text-slate-700 border-slate-200",
-      };
-  }
-}
+const EMPTY_TRAINING: CitizenTrainingSummary = {
+  total_modules_published: 0,
+  completed_count: 0,
+  progress_percent: 0,
+  badges_count: 0,
+  next_module: null,
+  badges: [],
+};
 
 export default function CitizenDashboardPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-
-  const [summary, setSummary] = useState<CitizenSummary>(DEFAULT_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const displayName = useMemo(
-    () => user?.full_name || user?.email || "Citizen",
-    [user]
-  );
+  const [reportsCount, setReportsCount] = useState(0);
+  const [pendingReports, setPendingReports] = useState(0);
+  const [resolvedReports, setResolvedReports] = useState(0);
+  const [training, setTraining] = useState<CitizenTrainingSummary>(EMPTY_TRAINING);
+  const [pcc, setPcc] = useState<CitizenPccSummary>(EMPTY_PCC);
 
   useEffect(() => {
-    let mounted = true;
-
     async function load() {
       setLoading(true);
       setError(null);
-
       try {
-        const res = await fetchCitizenSummary();
-        const data = res.data;
+        const [summary, reports, trainingSummary, pccSummary] = await Promise.all([
+          fetchCitizenSummary(),
+          fetchCitizenWasteReports(),
+          fetchCitizenTrainingSummary(),
+          fetchCitizenPccSummary(),
+        ]);
 
-        if (!mounted) return;
+        const pending = reports.filter((r) => r.status !== "resolved").length;
+        setReportsCount(reports.length);
+        setPendingReports(pending);
+        setResolvedReports(reports.length - pending);
+        setTraining(trainingSummary);
+        setPcc(pccSummary);
 
-        setSummary({
-          ...DEFAULT_SUMMARY,
-          ...data,
-          training: { ...DEFAULT_SUMMARY.training, ...(data?.training || {}) },
-          segregation: {
-            ...DEFAULT_SUMMARY.segregation,
-            ...(data?.segregation || {}),
-          },
-          reports: { ...DEFAULT_SUMMARY.reports, ...(data?.reports || {}) },
-          carbon: { ...DEFAULT_SUMMARY.carbon, ...(data?.carbon || {}) },
-        });
+        if (summary?.data?.reports) {
+          setReportsCount(summary.data.reports.total ?? reports.length);
+          setPendingReports(summary.data.reports.pending ?? pending);
+          setResolvedReports(summary.data.reports.resolved ?? reports.length - pending);
+        }
       } catch (e: any) {
-        if (!mounted) return;
-        const msg =
-          e?.response?.data?.detail ||
-          e?.message ||
-          "Failed to load dashboard data. Please try again.";
-        setError(String(msg));
+        setError(e?.response?.data?.detail || "Failed to load dashboard.");
       } finally {
-        if (!mounted) return;
         setLoading(false);
       }
     }
 
-    load();
-    return () => {
-      mounted = false;
-    };
+    void load();
   }, []);
 
-  const trainingPct = useMemo(() => {
-    const total = summary.training.total_modules || 0;
-    const done = summary.training.completed_modules || 0;
-    if (total <= 0) return 0;
-    return clamp(Math.round((done / total) * 100), 0, 100);
-  }, [summary.training.completed_modules, summary.training.total_modules]);
-
-  const segScore = summary.segregation.today_score;
-  const pill = statusPill(summary.segregation.today_status);
+  const trainingPercent = useMemo(() => (training.total_modules_published ? (training.completed_count / training.total_modules_published) * 100 : 0), [training]);
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-emerald-800">
-            Welcome back, {displayName}
-          </h1>
-          <p className="text-sm text-slate-500">
-            Your personal view of training, segregation, reports, and carbon
-            impact.
-          </p>
+      <CitizenPageHero
+        badge="CITIZEN · CITY CONTROL"
+        title="Citizen Dashboard"
+        subtitle="Overview of reports, training progress, and PCC impact."
+        actions={
+          <>
+            <button className="btn-secondary" onClick={() => navigate("/training")}>Go to Training</button>
+            <button className="btn-secondary" onClick={() => navigate("/waste/report")}>Report Waste</button>
+            <button className="btn-secondary" onClick={() => navigate("/waste/my-reports")}>My Reports</button>
+          </>
+        }
+      />
 
-          {error && (
-            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {error}
-            </div>
-          )}
-        </div>
+      {error && <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => navigate("/citizen/training")}
-            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
-          >
-            Go to Training
-          </button>
-          <button
-            onClick={() => navigate("/citizen/report-waste")}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Report Waste
-          </button>
-          <button
-            onClick={() => navigate("/citizen/my-reports")}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            My Reports
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Row */}
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500">Reports</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {summary.reports.total}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Pending:{" "}
-            <span className="font-medium text-slate-700">
-              {summary.reports.pending}
-            </span>{" "}
-            • Resolved:{" "}
-            <span className="font-medium text-slate-700">
-              {summary.reports.resolved}
-            </span>
-          </p>
+        <div className="surface-card-strong rounded-3xl p-4">
+          <p className="text-xs text-slate-500">Reports</p>
+          <p className="text-3xl font-semibold text-slate-900">{reportsCount}</p>
+          <p className="text-xs text-slate-500">Pending: {pendingReports} · Resolved: {resolvedReports}</p>
         </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500">
-            Training Progress
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {trainingPct}%
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            {summary.training.completed_modules}/
-            {summary.training.total_modules} modules •{" "}
-            <span className="font-medium text-slate-700">
-              {summary.training.badges_earned}
-            </span>{" "}
-            badges
-          </p>
+        <div className="surface-card-strong rounded-3xl p-4">
+          <p className="text-xs text-slate-500">Training Progress</p>
+          <p className="text-3xl font-semibold text-slate-900">{trainingPercent.toFixed(0)}%</p>
+          <p className="text-xs text-slate-500">{training.completed_count}/{training.total_modules_published} modules</p>
         </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500">CO₂ Saved</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {summary.carbon.co2_saved_kg.toFixed(2)} kg
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Based on your verified actions and reports.
-          </p>
+        <div className="surface-card-strong rounded-3xl p-4">
+          <p className="text-xs text-slate-500">CO₂ Saved</p>
+          <p className="text-3xl font-semibold text-slate-900">{pcc.co2_saved_kg.toFixed(2)} kg</p>
         </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500">PCC Tokens</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {summary.carbon.pcc_tokens.toFixed(2)}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Earn more by consistent segregation.
-          </p>
+        <div className="surface-card-strong rounded-3xl p-4">
+          <p className="text-xs text-slate-500">PCC Tokens</p>
+          <p className="text-3xl font-semibold text-slate-900">{pcc.net_pcc.toFixed(2)}</p>
         </div>
       </div>
 
-      {/* Feature Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        {/* Training */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="text-sm font-semibold text-emerald-700">
-              Training &amp; Badges
-            </h2>
-            <button
-              onClick={() => navigate("/citizen/training")}
-              className="text-xs font-medium text-emerald-700 hover:underline"
-            >
-              Open
-            </button>
+        <div className="surface-card-strong rounded-3xl p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">Training</h3>
+            <button className="text-xs text-emerald-700" onClick={() => navigate("/training")}>Open</button>
           </div>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Complete mandatory green training and earn recognition.
-          </p>
-
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Progress</span>
-              <span className="font-medium text-slate-700">{trainingPct}%</span>
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{ width: `${trainingPct}%` }}
-              />
-            </div>
-
-            <div className="mt-3 text-xs text-slate-500">
-              Next:{" "}
-              <span className="font-medium text-slate-700">
-                {summary.training.next_module_title || "—"}
-              </span>
-            </div>
-          </div>
+          <p className="mt-2 text-sm text-slate-600">Next module: {training.next_module?.title || "All complete"}</p>
         </div>
-
-        {/* Segregation */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="text-sm font-semibold text-emerald-700">
-              Daily Segregation
-            </h2>
-            <button
-              onClick={() => navigate("/citizen/household")}
-              className="text-xs font-medium text-emerald-700 hover:underline"
-            >
-              Open
-            </button>
+        <div className="surface-card-strong rounded-3xl p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">Report Waste Flow</h3>
+            <button className="text-xs text-emerald-700" onClick={() => navigate("/waste/report")}>Open</button>
           </div>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Track segregation quality and support cleaner wards.
-          </p>
-
-          <div className="mt-4 flex items-center gap-2">
-            <span
-              className={`inline-flex items-center rounded-full border px-2 py-1 text-xs ${pill.cls}`}
-            >
-              {pill.label}
-            </span>
-            <span className="text-xs text-slate-500">
-              Streak:{" "}
-              <span className="font-medium text-slate-700">
-                {summary.segregation.streak_days} days
-              </span>
-            </span>
-          </div>
-
-          <div className="mt-3">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Today score</span>
-              <span className="font-medium text-slate-700">
-                {segScore === null ? "—" : `${clamp(segScore, 0, 100)}/100`}
-              </span>
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{
-                  width: `${segScore === null ? 0 : clamp(segScore, 0, 100)}%`,
-                }}
-              />
-            </div>
-
-            <button
-              onClick={() => navigate("/citizen/household")}
-              className="mt-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Update Household Segregation
-            </button>
-          </div>
+          <p className="mt-2 text-sm text-slate-600">Upload image file, analyze with AI, then submit report.</p>
+          <button className="btn-secondary mt-3 w-full" onClick={() => navigate("/waste/report")}>Create New Waste Report</button>
         </div>
-
-        {/* Carbon */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <h2 className="text-sm font-semibold text-emerald-700">
-              Carbon &amp; PCC Credits
-            </h2>
-            <button
-              onClick={() => navigate("/citizen/insights")}
-              className="text-xs font-medium text-emerald-700 hover:underline"
-            >
-              Open
-            </button>
+        <div className="surface-card-strong rounded-3xl p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">Insights</h3>
+            <button className="text-xs text-emerald-700" onClick={() => navigate("/insights")}>Open</button>
           </div>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Each correct action translates to CO₂ savings and PCC tokens.
-          </p>
-
-          <div className="mt-4 space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">CO₂ saved</span>
-              <span className="font-semibold text-slate-900">
-                {summary.carbon.co2_saved_kg.toFixed(2)} kg
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">PCC tokens</span>
-              <span className="font-semibold text-slate-900">
-                {summary.carbon.pcc_tokens.toFixed(2)}
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => navigate("/citizen/insights")}
-            className="mt-4 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-          >
-            View My Insights
-          </button>
+          <p className="mt-2 text-sm text-slate-600">Track segregation score and weekly waste mix.</p>
+          <button className="btn-primary mt-3 w-full" onClick={() => navigate("/insights")}>View My Insights</button>
         </div>
       </div>
 
-      {loading && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
-          Loading your dashboard…
-        </div>
-      )}
+      {loading && <div className="surface-card-strong rounded-xl p-3 text-sm text-slate-600">Loading dashboard...</div>}
     </div>
   );
 }

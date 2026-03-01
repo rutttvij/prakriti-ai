@@ -10,7 +10,9 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Enum,
+    UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -58,6 +60,7 @@ class TrainingModule(Base):
         index=True,
     )
     summary = Column(Text, nullable=True)
+    content_json = Column(JSONB, nullable=False, server_default="{}")
     difficulty = Column(
         Enum(TrainingDifficulty, name="training_difficulty", native_enum=False),
         nullable=False,
@@ -100,6 +103,7 @@ class TrainingLesson(Base):
 
 class TrainingProgress(Base):
     __tablename__ = "training_progress"
+    __table_args__ = (UniqueConstraint("user_id", "module_id", name="uq_training_progress_user_module"),)
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

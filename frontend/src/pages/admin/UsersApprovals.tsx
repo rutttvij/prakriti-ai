@@ -12,6 +12,7 @@ export default function UsersApprovalsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [approvals, setApprovals] = useState<AdminApproval[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actioningUserId, setActioningUserId] = useState<number | null>(null);
 
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
@@ -58,6 +59,39 @@ export default function UsersApprovalsPage() {
       push("error", err?.response?.data?.detail || "Failed to update approval.");
     }
   };
+
+  const onUserStateChange = async (userId: number, activate: boolean) => {
+    setActioningUserId(userId);
+    try {
+      await api.patch<User>(`/admin/users/${userId}/${activate ? "activate" : "deactivate"}`);
+      push("success", `User ${activate ? "activated" : "deactivated"}.`);
+      await load();
+    } catch (err: any) {
+      push("error", err?.response?.data?.detail || `Failed to ${activate ? "activate" : "deactivate"} user.`);
+    } finally {
+      setActioningUserId(null);
+    }
+  };
+
+  const pendingUserApprovals = useMemo(() => {
+    return users
+      .filter((u) => !u.is_active && u.role !== "SUPER_ADMIN")
+      .map((u) => ({
+        id: u.id,
+        user_id: u.id,
+        name: u.full_name || u.email,
+        email: u.email,
+        role: u.role,
+        status: "PENDING_USER",
+        created_at: null,
+      })) as AdminApproval[];
+  }, [users]);
+
+  const allApprovals = useMemo(() => {
+    const bulk = approvals || [];
+    const userOnly = pendingUserApprovals.filter((u) => !bulk.some((b) => b.user_id === u.user_id));
+    return [...userOnly, ...bulk];
+  }, [approvals, pendingUserApprovals]);
 
   return (
     <div className="space-y-5">
@@ -146,8 +180,12 @@ export default function UsersApprovalsPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2">
-                        <button className="btn-secondary px-3 py-1 text-xs" disabled>
-                          {u.is_active ? "Deactivate" : "Activate"}
+                        <button
+                          className="btn-secondary px-3 py-1 text-xs"
+                          onClick={() => onUserStateChange(u.id, !u.is_active)}
+                          disabled={actioningUserId === u.id || u.role === "SUPER_ADMIN"}
+                        >
+                          {actioningUserId === u.id ? "Please wait..." : u.is_active ? "Deactivate" : "Activate"}
                         </button>
                       </td>
                     </tr>
@@ -180,7 +218,7 @@ export default function UsersApprovalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {approvals.map((a) => (
+                {allApprovals.map((a) => (
                   <tr key={a.id} className="border-b border-emerald-100/70">
                     <td className="px-3 py-2 text-slate-900">{a.name}</td>
                     <td className="px-3 py-2 text-slate-700">{a.email}</td>
@@ -188,14 +226,23 @@ export default function UsersApprovalsPage() {
                     <td className="px-3 py-2 text-slate-500">{a.created_at ? new Date(a.created_at).toLocaleString() : "-"}</td>
                     <td className="px-3 py-2">
                       <div className="flex gap-2">
-                        <button className="btn-primary px-3 py-1 text-xs" onClick={() => onDecision(a.id, "approve")}>Approve</button>
-                        <button className="btn-secondary px-3 py-1 text-xs" onClick={() => onDecision(a.id, "reject")}>Reject</button>
+                        {a.status === "PENDING_USER" ? (
+                          <>
+                            <button className="btn-primary px-3 py-1 text-xs" onClick={() => onUserStateChange(a.user_id, true)}>Approve</button>
+                            <button className="btn-secondary px-3 py-1 text-xs" onClick={() => onUserStateChange(a.user_id, false)}>Reject</button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="btn-primary px-3 py-1 text-xs" onClick={() => onDecision(a.id, "approve")}>Approve</button>
+                            <button className="btn-secondary px-3 py-1 text-xs" onClick={() => onDecision(a.id, "reject")}>Reject</button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
 
-                {!loading && approvals.length === 0 && (
+                {!loading && allApprovals.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-3 py-6 text-center text-slate-500">No pending approvals.</td>
                   </tr>

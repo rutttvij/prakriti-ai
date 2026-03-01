@@ -12,4 +12,5 @@ export interface User {
   full_name?: string | null;
   role: UserRole;
   is_active: boolean;
+  meta?: Record<string, unknown>;
 }

@@ -14,8 +14,9 @@ from app.api import deps
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.models.admin_ops import AuditLog, PlatformSetting, WorkforceAssignment, Zone
-from app.models.bulk import BulkApprovalStatus, BulkGenerator, Transaction, TransactionType
+from app.models.bulk import BulkApprovalStatus, BulkGenerator, Transaction, TransactionType, WasteLog
 from app.models.contact import ContactMessage
+from app.models.household import Household, SegregationLog
 from app.models.leads import DemoRequest
 from app.models.pcc import EmissionFactor
 from app.models.user import User, UserRole
@@ -29,8 +30,24 @@ from app.schemas.admin_ops import (
     AuditLogListResponse,
     GenericOk,
     PccSummaryResponse,
+    PccSettingsRead,
+    PccSettingsUpdate,
+    PccEmissionFactorItem,
+    PccEmissionFactorCreate,
+    PccEmissionFactorUpdate,
     PccTransactionItem,
     PccTransactionListResponse,
+    PccAwardBody,
+    PccActionResponse,
+    PccBulkAwardBody,
+    PccBulkAwardResponse,
+    PccAwardedItem,
+    PccSkippedItem,
+    PccRevokeBody,
+    CitizenSegregationLogListResponse,
+    CitizenSegregationLogItem,
+    BulkGeneratorLogListResponse,
+    BulkGeneratorLogItem,
     SettingsRead,
     SettingsUpdate,
     WorkforceAssignZoneBody,
@@ -43,6 +60,7 @@ from app.schemas.admin_ops import (
     AdminKpiSummary,
 )
 from app.services.admin_audit_service import log_admin_action
+from app.services.pcc_award_service import award_reference, revoke_reference
 
 router = APIRouter(prefix="/admin", tags=["admin-ops"])
 
@@ -77,6 +95,16 @@ def _upsert_setting(db: Session, key: str, value_json: Any, actor: User) -> Plat
     db.add(row)
     db.flush()
     return row
+
+
+def _get_pcc_settings(db: Session) -> tuple[float, dict[str, float], datetime]:
+    pcc_unit_row = db.query(PlatformSetting).filter(PlatformSetting.key == "pcc_unit_kgco2e").first()
+    mult_row = db.query(PlatformSetting).filter(PlatformSetting.key == "quality_multipliers").first()
+    pcc_unit = float(pcc_unit_row.value_json if pcc_unit_row else 10.0)
+    multipliers = mult_row.value_json if mult_row and isinstance(mult_row.value_json, dict) else SETTINGS_DEFAULTS["quality_multipliers"]
+    updated_at_candidates = [r.updated_at for r in (pcc_unit_row, mult_row) if r is not None and r.updated_at is not None]
+    updated_at = max(updated_at_candidates) if updated_at_candidates else datetime.now(timezone.utc)
+    return pcc_unit, {k: float(v) for k, v in multipliers.items()}, updated_at
 
 
 @router.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
@@ -440,12 +468,114 @@ def pcc_summary(
     return PccSummaryResponse(total_credited=float(credited), total_debited=float(debited), net_pcc=float(credited - debited), tx_count=int(total))
 
 
+@router.get("/pcc/settings", response_model=PccSettingsRead)
+def get_pcc_settings(
+    db: Session = Depends(get_db),
+    _: User = Depends(deps.require_super_admin),
+):
+    unit, multipliers, updated_at = _get_pcc_settings(db)
+    return PccSettingsRead(pcc_unit_kgco2e=unit, quality_multipliers=multipliers, updated_at=updated_at)
+
+
+@router.put("/pcc/settings", response_model=PccSettingsRead)
+def put_pcc_settings(
+    payload: PccSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin),
+):
+    data = payload.model_dump(exclude_unset=True)
+    if "pcc_unit_kgco2e" in data:
+        _upsert_setting(db, "pcc_unit_kgco2e", float(data["pcc_unit_kgco2e"]), current_user)
+    if "quality_multipliers" in data:
+        cleaned = {str(k).lower(): float(v) for k, v in (data["quality_multipliers"] or {}).items()}
+        _upsert_setting(db, "quality_multipliers", cleaned, current_user)
+    log_admin_action(db, actor=current_user, action="update", entity="pcc_settings", entity_id="global", metadata=data)
+    db.commit()
+    return get_pcc_settings(db=db, _=current_user)
+
+
+@router.get("/pcc/emission-factors", response_model=list[PccEmissionFactorItem])
+def list_pcc_emission_factors(
+    db: Session = Depends(get_db),
+    _: User = Depends(deps.require_super_admin),
+):
+    rows = db.query(EmissionFactor).order_by(EmissionFactor.category.asc()).all()
+    return [
+        PccEmissionFactorItem(
+            id=row.id,
+            waste_category=row.category,
+            kgco2e_per_kg=float(row.kgco2e_per_kg),
+            active=bool(row.active),
+            updated_at=row.updated_at,
+        )
+        for row in rows
+    ]
+
+
+@router.post("/pcc/emission-factors", response_model=PccEmissionFactorItem, status_code=status.HTTP_201_CREATED)
+def create_pcc_emission_factor(
+    payload: PccEmissionFactorCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin),
+):
+    category = payload.waste_category.strip().lower()
+    existing = db.query(EmissionFactor).filter(func.lower(EmissionFactor.category) == category).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Emission factor already exists for this category")
+    row = EmissionFactor(category=category, kgco2e_per_kg=payload.kgco2e_per_kg, active=payload.active)
+    db.add(row)
+    db.flush()
+    log_admin_action(db, actor=current_user, action="create", entity="emission_factor", entity_id=row.id, metadata={"waste_category": category})
+    db.commit()
+    db.refresh(row)
+    return PccEmissionFactorItem(id=row.id, waste_category=row.category, kgco2e_per_kg=float(row.kgco2e_per_kg), active=bool(row.active), updated_at=row.updated_at)
+
+
+@router.patch("/pcc/emission-factors/{factor_id}", response_model=PccEmissionFactorItem)
+def update_pcc_emission_factor(
+    factor_id: int,
+    payload: PccEmissionFactorUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin),
+):
+    row = db.get(EmissionFactor, factor_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Emission factor not found")
+    updates = payload.model_dump(exclude_unset=True)
+    if "kgco2e_per_kg" in updates:
+        row.kgco2e_per_kg = float(updates["kgco2e_per_kg"])
+    if "active" in updates:
+        row.active = bool(updates["active"])
+    db.add(row)
+    log_admin_action(db, actor=current_user, action="update", entity="emission_factor", entity_id=row.id, metadata=updates)
+    db.commit()
+    db.refresh(row)
+    return PccEmissionFactorItem(id=row.id, waste_category=row.category, kgco2e_per_kg=float(row.kgco2e_per_kg), active=bool(row.active), updated_at=row.updated_at)
+
+
+@router.delete("/pcc/emission-factors/{factor_id}", response_model=GenericOk)
+def delete_pcc_emission_factor(
+    factor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin),
+):
+    row = db.get(EmissionFactor, factor_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Emission factor not found")
+    row.active = False
+    db.add(row)
+    log_admin_action(db, actor=current_user, action="delete", entity="emission_factor", entity_id=row.id)
+    db.commit()
+    return GenericOk(ok=True)
+
+
 @router.get("/pcc/transactions", response_model=PccTransactionListResponse)
 def pcc_transactions(
     date_from: datetime | None = Query(default=None),
     date_to: datetime | None = Query(default=None),
     user_id: int | None = Query(default=None),
     tx_type: str | None = Query(default=None),
+    type: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -458,10 +588,13 @@ def pcc_transactions(
         qry = qry.filter(Transaction.created_at <= date_to)
     if user_id is not None:
         qry = qry.filter(Transaction.user_id == user_id)
-    if tx_type:
-        qry = qry.filter(func.lower(Transaction.tx_type.cast(String)) == tx_type.lower())
+    effective_type = tx_type or type
+    if effective_type:
+        qry = qry.filter(func.lower(Transaction.tx_type.cast(String)) == effective_type.lower())
 
     total = qry.count()
+    credited = qry.filter(Transaction.tx_type == TransactionType.CREDIT).with_entities(func.coalesce(func.sum(Transaction.amount_pcc), 0.0)).scalar() or 0.0
+    debited = qry.filter(Transaction.tx_type == TransactionType.DEBIT).with_entities(func.coalesce(func.sum(Transaction.amount_pcc), 0.0)).scalar() or 0.0
     rows = (
         qry.order_by(Transaction.created_at.desc(), Transaction.id.desc())
         .offset((page - 1) * page_size)
@@ -475,11 +608,238 @@ def pcc_transactions(
             type=row.tx_type.value if hasattr(row.tx_type, "value") else str(row.tx_type),
             amount_pcc=float(row.amount_pcc or 0.0),
             reason=row.reason,
+            ref_type=row.ref_type,
+            ref_id=row.ref_id,
+            created_by_user_id=row.created_by_user_id,
             created_at=row.created_at,
         )
         for row in rows
     ]
-    return PccTransactionListResponse(items=items, total=total)
+    return PccTransactionListResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_credited=float(credited),
+        total_debited=float(debited),
+        net_pcc=float(credited - debited),
+        transactions_count=total,
+    )
+
+
+@router.get("/pcc/transactions/export.csv", response_class=PlainTextResponse)
+def export_pcc_transactions_v2(
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    user_id: int | None = Query(default=None),
+    tx_type: str | None = Query(default=None),
+    type: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: User = Depends(deps.require_super_admin),
+):
+    qry = db.query(Transaction)
+    if date_from:
+        qry = qry.filter(Transaction.created_at >= date_from)
+    if date_to:
+        qry = qry.filter(Transaction.created_at <= date_to)
+    if user_id is not None:
+        qry = qry.filter(Transaction.user_id == user_id)
+    effective_type = tx_type or type
+    if effective_type:
+        qry = qry.filter(func.lower(Transaction.tx_type.cast(String)) == effective_type.lower())
+
+    rows = qry.order_by(Transaction.created_at.desc(), Transaction.id.desc()).all()
+    out = StringIO()
+    w = csv.writer(out)
+    w.writerow(["id", "user_id", "type", "amount_pcc", "reason", "ref_type", "ref_id", "created_by_user_id", "created_at"])
+    for row in rows:
+        w.writerow([
+            row.id,
+            row.user_id,
+            row.tx_type.value if hasattr(row.tx_type, "value") else str(row.tx_type),
+            row.amount_pcc or 0,
+            row.reason or "",
+            row.ref_type or "",
+            row.ref_id or "",
+            row.created_by_user_id or "",
+            row.created_at.isoformat(),
+        ])
+    return out.getvalue()
+
+
+@router.post("/pcc/award", response_model=PccActionResponse)
+def pcc_award_single(
+    payload: PccAwardBody,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin_or_verified_worker),
+):
+    result = award_reference(db, reference_type=payload.reference_type, reference_id=payload.reference_id, actor=current_user)
+    db.commit()
+    return PccActionResponse(
+        reference_type=payload.reference_type,
+        reference_id=payload.reference_id,
+        transaction_id=result.transaction.id,
+        amount=result.amount,
+        pcc_status="awarded",
+    )
+
+
+@router.post("/pcc/award/bulk", response_model=PccBulkAwardResponse)
+def pcc_award_bulk(
+    payload: PccBulkAwardBody,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin_or_verified_worker),
+):
+    awarded: list[PccAwardedItem] = []
+    skipped: list[PccSkippedItem] = []
+    for item in payload.items:
+        try:
+            result = award_reference(db, reference_type=item.reference_type, reference_id=item.reference_id, actor=current_user)
+            db.commit()
+            awarded.append(PccAwardedItem(reference_type=item.reference_type, reference_id=item.reference_id, amount=result.amount))
+        except HTTPException as exc:
+            db.rollback()
+            skipped.append(PccSkippedItem(reference_type=item.reference_type, reference_id=item.reference_id, reason=str(exc.detail)))
+        except Exception as exc:  # noqa: BLE001
+            db.rollback()
+            skipped.append(PccSkippedItem(reference_type=item.reference_type, reference_id=item.reference_id, reason=str(exc)))
+    return PccBulkAwardResponse(awarded=awarded, skipped=skipped)
+
+
+@router.post("/pcc/revoke", response_model=PccActionResponse)
+def pcc_revoke(
+    payload: PccRevokeBody,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin_or_verified_worker),
+):
+    tx = revoke_reference(
+        db,
+        reference_type=payload.reference_type,
+        reference_id=payload.reference_id,
+        actor=current_user,
+        reason=payload.reason,
+    )
+    db.commit()
+    return PccActionResponse(
+        reference_type=payload.reference_type,
+        reference_id=payload.reference_id,
+        transaction_id=tx.id,
+        amount=float(tx.amount_pcc or 0.0),
+        pcc_status="revoked",
+    )
+
+
+@router.get("/logs/citizen-segregation", response_model=CitizenSegregationLogListResponse)
+def list_citizen_segregation_logs(
+    q: str | None = Query(default=None),
+    pcc_status: str | None = Query(default=None),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _: User = Depends(deps.require_super_admin_or_verified_worker),
+):
+    qry = (
+        db.query(SegregationLog, User, Household)
+        .join(User, SegregationLog.citizen_id == User.id)
+        .outerjoin(Household, Household.id == SegregationLog.household_id)
+    )
+    if q:
+        p = f"%{q.strip()}%"
+        qry = qry.filter(or_(User.full_name.ilike(p), User.email.ilike(p)))
+    if pcc_status:
+        qry = qry.filter(func.lower(SegregationLog.pcc_status) == pcc_status.lower())
+    if date_from:
+        qry = qry.filter(SegregationLog.created_at >= date_from)
+    if date_to:
+        qry = qry.filter(SegregationLog.created_at <= date_to)
+
+    total = qry.count()
+    rows = (
+        qry.order_by(SegregationLog.created_at.desc(), SegregationLog.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    items = [
+        CitizenSegregationLogItem(
+            id=log.id,
+            user_id=user.id,
+            user_name=user.full_name or user.email,
+            household=hh.name if hh else None,
+            waste_category=log.waste_category,
+            weight_kg=float(log.weight_kg or (log.dry_kg or 0.0) + (log.wet_kg or 0.0) + (log.reject_kg or 0.0)),
+            quality_score=float(log.quality_score) if log.quality_score is not None else None,
+            quality_level=log.quality_level,
+            pcc_status=(log.pcc_status or "pending"),
+            awarded_pcc_amount=float(log.awarded_pcc_amount) if log.awarded_pcc_amount is not None else None,
+            created_at=log.created_at,
+            evidence_image_url=log.evidence_image_url,
+        )
+        for log, user, hh in rows
+    ]
+    return CitizenSegregationLogListResponse(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.get("/logs/bulk-generator", response_model=BulkGeneratorLogListResponse)
+def list_bulk_generator_logs(
+    q: str | None = Query(default=None),
+    verification_status: str | None = Query(default=None),
+    pcc_status: str | None = Query(default=None),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _: User = Depends(deps.require_super_admin_or_verified_worker),
+):
+    qry = (
+        db.query(WasteLog, User, BulkGenerator)
+        .join(User, WasteLog.user_id == User.id)
+        .outerjoin(BulkGenerator, BulkGenerator.id == WasteLog.bulk_generator_id)
+    )
+    if q:
+        p = f"%{q.strip()}%"
+        qry = qry.filter(
+            or_(
+                User.full_name.ilike(p),
+                User.email.ilike(p),
+                BulkGenerator.organization_name.ilike(p),
+            )
+        )
+    if verification_status:
+        qry = qry.filter(func.lower(WasteLog.verification_status) == verification_status.lower())
+    if pcc_status:
+        qry = qry.filter(func.lower(WasteLog.pcc_status) == pcc_status.lower())
+    if date_from:
+        qry = qry.filter(WasteLog.logged_at >= date_from)
+    if date_to:
+        qry = qry.filter(WasteLog.logged_at <= date_to)
+
+    total = qry.count()
+    rows = (
+        qry.order_by(WasteLog.logged_at.desc(), WasteLog.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    items = [
+        BulkGeneratorLogItem(
+            id=log.id,
+            user_id=user.id,
+            org_name=bg.organization_name if bg else None,
+            waste_category=str(log.category.value if hasattr(log.category, "value") else log.category).lower() if log.category else None,
+            weight_kg=float(log.weight_kg or log.logged_weight or 0.0),
+            quality_level=log.quality_level,
+            verification_status=log.verification_status or "pending",
+            pcc_status=log.pcc_status or "pending",
+            awarded_pcc_amount=float(log.awarded_pcc_amount) if log.awarded_pcc_amount is not None else None,
+            created_at=log.logged_at,
+        )
+        for log, user, bg in rows
+    ]
+    return BulkGeneratorLogListResponse(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/reports/demo-requests.csv", response_class=PlainTextResponse)

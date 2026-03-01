@@ -1,7 +1,7 @@
 # app/api/admin.py
 
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -17,6 +17,7 @@ from app.models.carbon import CarbonActivity, CarbonActivityType
 from app.models.bulk import BulkGenerator, BulkApprovalStatus
 from app.schemas.user import UserRead, UserRole as UserRoleSchema
 from app.core.carbon_engine import record_carbon_activity, PCC_PER_KG_CO2
+from app.services.pcc_award_service import award_reference
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -489,25 +490,54 @@ def award_pcc_for_segregation_log(
 # -------------------------
 # 5) Manual PCC award (KEPT)
 # -------------------------
-@router.post("/pcc/award", response_model=AwardPCCResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/pcc/award", status_code=status.HTTP_201_CREATED)
 def award_pcc_tokens(
-    body: AwardPCCBody,
+    body: dict[str, Any],
     db: Session = Depends(get_db),
-    current_user=Depends(deps.require_super_admin),
+    current_user=Depends(deps.require_super_admin_or_verified_worker),
 ):
-    user = db.get(User, body.user_id)
+    reference_type = body.get("reference_type")
+    reference_id = body.get("reference_id")
+    if reference_type is not None and reference_id is not None:
+        result = award_reference(
+            db,
+            reference_type=str(reference_type),
+            reference_id=int(reference_id),
+            actor=current_user,
+        )
+        db.commit()
+        return {
+            "reference_type": str(reference_type),
+            "reference_id": int(reference_id),
+            "transaction_id": result.transaction.id,
+            "amount": float(result.amount),
+            "pcc_status": "awarded",
+        }
+
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Super Admin required for manual token award.")
+
+    if body.get("user_id") is None or body.get("tokens") is None:
+        raise HTTPException(status_code=422, detail="Either {reference_type, reference_id} or {user_id, tokens} is required.")
+
+    payload = AwardPCCBody(
+        user_id=int(body["user_id"]),
+        tokens=float(body["tokens"]),
+        reason=body.get("reason"),
+    )
+    user = db.get(User, payload.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    tokens = float(body.tokens)
+    tokens = float(payload.tokens)
     if tokens <= 0:
         raise HTTPException(status_code=400, detail="Tokens must be positive.")
 
     carbon_kg = tokens / PCC_PER_KG_CO2
 
     details = {}
-    if body.reason:
-        details["reason"] = body.reason
+    if payload.reason:
+        details["reason"] = payload.reason
 
     record_carbon_activity(
         db=db,
@@ -520,7 +550,16 @@ def award_pcc_tokens(
 
     db.refresh(user)
 
-    return AwardPCCResponse(
-        user=user,
-        new_balance=user.pcc_balance,
-    )
+    return {
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role.value,
+            "is_active": user.is_active,
+            "government_id": user.government_id,
+            "pincode": user.pincode,
+            "meta": user.meta or {},
+        },
+        "new_balance": user.pcc_balance,
+    }

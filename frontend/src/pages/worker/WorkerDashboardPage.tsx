@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../../lib/api";
 import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
 
 interface Stats {
   assignedTotal: number;
-  open: number;
+  openQueue: number;
   inProgress: number;
   resolved: number;
   availableOpen: number;
 }
 
-function statusCounts(
-  reports: WasteReport[]
-): Record<WasteReportStatus, number> {
+function statusCounts(reports: WasteReport[]): Record<WasteReportStatus, number> {
   const counts: Record<WasteReportStatus, number> = {
     OPEN: 0,
     IN_PROGRESS: 0,
@@ -43,7 +42,7 @@ export function WorkerDashboardPage() {
 
         setStats({
           assignedTotal: assigned.length,
-          open: counts.OPEN,
+          openQueue: available.length,
           inProgress: counts.IN_PROGRESS,
           resolved: counts.RESOLVED,
           availableOpen: available.length,
@@ -56,165 +55,62 @@ export function WorkerDashboardPage() {
       }
     }
 
-    load();
+    void load();
   }, []);
 
-  if (loading) {
-    return (
-      <p className="text-sm text-slate-600 animate-pulse">
-        Loading your dashboard…
-      </p>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-xs text-red-700 shadow-sm">
-        {error}
-      </div>
-    );
-  }
-
-  if (!stats) return null;
+  if (loading) return <div className="text-sm text-slate-600">Loading dashboard...</div>;
 
   return (
-    <div className="relative space-y-6">
-      {/* soft emerald glow behind header */}
-      <div className="pointer-events-none absolute inset-x-0 -top-10 h-24 bg-[radial-gradient(circle_at_top,_#bbf7d0,_transparent_65%)] opacity-70" />
-
-      {/* HEADER */}
-      <header className="relative z-10 space-y-1">
-        <h1 className="text-2xl font-bold text-emerald-900">
-          Waste Worker Dashboard
-        </h1>
-        <p className="text-sm text-slate-600">
-          Track your report workload, see what&apos;s completed, and find new
-          jobs to claim in the city.
-        </p>
-      </header>
-
-      {/* STATS GRID */}
-      <section className="relative z-10 grid gap-4 md:grid-cols-4">
-        {/* Assigned to you */}
-        <div
-          className="
-            rounded-2xl border border-emerald-100/80 bg-white/80
-            px-4 py-3 shadow-md shadow-emerald-100/70 backdrop-blur-sm
-          "
-        >
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            Assigned to you
-          </p>
-          <p className="mt-1 text-2xl font-bold text-emerald-900">
-            {stats.assignedTotal}
-          </p>
-          <p className="mt-1 text-[0.7rem] text-slate-500">
-            Total reports currently on your route.
-          </p>
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Waste Worker · Operations
         </div>
-
-        {/* Open */}
-        <div
-          className="
-            rounded-2xl border border-amber-100/80 bg-amber-50/80
-            px-4 py-3 shadow-md shadow-amber-100/60 backdrop-blur-sm
-          "
-        >
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-amber-700">
-            Open jobs
-          </p>
-          <p className="mt-1 text-2xl font-bold text-amber-900">
-            {stats.open}
-          </p>
-          <p className="mt-1 text-[0.7rem] text-amber-800/80">
-            Not started yet. Prioritise these first.
-          </p>
-        </div>
-
-        {/* In progress */}
-        <div
-          className="
-            rounded-2xl border border-sky-100/80 bg-sky-50/80
-            px-4 py-3 shadow-md shadow-sky-100/60 backdrop-blur-sm
-          "
-        >
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sky-700">
-            In progress
-          </p>
-          <p className="mt-1 text-2xl font-bold text-sky-900">
-            {stats.inProgress}
-          </p>
-          <p className="mt-1 text-[0.7rem] text-slate-600">
-            Reports where work is already underway.
-          </p>
-        </div>
-
-        {/* Completed */}
-        <div
-          className="
-            rounded-2xl border border-emerald-100/80 bg-gradient-to-br
-            from-emerald-50/90 via-white/90 to-emerald-50/80
-            px-4 py-3 shadow-md shadow-emerald-100/70 backdrop-blur-sm
-          "
-        >
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-700">
-            Completed reports
-          </p>
-          <p className="mt-1 text-2xl font-bold text-emerald-900">
-            {stats.resolved}
-          </p>
-          <p className="mt-1 text-[0.7rem] text-slate-600">
-            Closed with proof and confirmation.
-          </p>
-        </div>
+        <h1 className="mt-3 text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Worker Dashboard</h1>
+        <p className="mt-1 text-sm text-emerald-100">Manage assigned reports, claim open jobs, and update field execution in real time.</p>
       </section>
 
-      {/* AVAILABLE + COMPLETED “SIDEBAR” SUMMARY */}
-      <section
-        className="
-          relative z-10 rounded-3xl border border-emerald-100/80
-          bg-white/80 px-5 py-4 shadow-md shadow-emerald-100/70
-          backdrop-blur-sm flex flex-col gap-3 md:flex-row md:items-center md:justify-between
-        "
-      >
-        {/* Left: open queue */}
-        <div>
-          <p className="text-sm text-slate-700">
-            There are{" "}
-            <span className="font-semibold text-emerald-800">
-              {stats.availableOpen}
-            </span>{" "}
-            open reports in the city waiting to be claimed.
-          </p>
-          <p className="text-[0.7rem] text-slate-500">
-            Go to <span className="font-semibold">Available Reports</span> to
-            pick the nearest job on your route.
-          </p>
-        </div>
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
-        {/* Right: compact chips – acts like a mini sidebar summary */}
-        <div className="flex flex-wrap gap-2 justify-start md:justify-end">
-          <span
-            className="
-              inline-flex items-center rounded-full border border-emerald-500/70
-              bg-emerald-50/80 px-4 py-1.5 text-[0.75rem] font-semibold
-              text-emerald-800 shadow-sm shadow-emerald-100
-            "
-          >
-            🧹 Open queue · claim a job
-          </span>
+      {stats && (
+        <>
+          <section className="grid gap-4 md:grid-cols-4">
+            <div className="surface-card-strong rounded-[1.6rem] p-4">
+              <p className="text-xs text-slate-500">Assigned reports</p>
+              <p className="mt-1 text-4xl font-semibold text-slate-900">{stats.assignedTotal}</p>
+            </div>
+            <div className="surface-card-strong rounded-[1.6rem] p-4">
+              <p className="text-xs text-slate-500">Open queue</p>
+              <p className="mt-1 text-4xl font-semibold text-amber-700">{stats.openQueue}</p>
+            </div>
+            <div className="surface-card-strong rounded-[1.6rem] p-4">
+              <p className="text-xs text-slate-500">In progress</p>
+              <p className="mt-1 text-4xl font-semibold text-sky-700">{stats.inProgress}</p>
+            </div>
+            <div className="surface-card-strong rounded-[1.6rem] p-4">
+              <p className="text-xs text-slate-500">Resolved</p>
+              <p className="mt-1 text-4xl font-semibold text-emerald-700">{stats.resolved}</p>
+            </div>
+          </section>
 
-          <span
-            className="
-              inline-flex items-center rounded-full border border-emerald-200/80
-              bg-emerald-50/70 px-4 py-1.5 text-[0.75rem] font-semibold
-              text-emerald-900
-            "
-          >
-            ✅ Completed reports: {stats.resolved}
-          </span>
-        </div>
-      </section>
+          <section className="surface-card-strong rounded-[1.8rem] px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-900">Execution Queue</h2>
+                <p className="mt-1 text-sm text-slate-600">{stats.availableOpen} unassigned reports are waiting to be claimed.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link to="/worker/reports/available" className="btn-primary px-4 py-2 text-sm">Open Available Reports</Link>
+                <Link to="/worker/reports/my" className="btn-secondary px-4 py-2 text-sm">Open My Assigned</Link>
+                <Link to="/worker/route-map" className="btn-secondary px-4 py-2 text-sm">Open Route Map</Link>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

@@ -1,60 +1,130 @@
 import { useEffect, useMemo, useState } from "react";
 
-import api from "../../lib/api";
+import {
+  createAdminContentItem,
+  deleteAdminContentItem,
+  fetchAdminContentConfig,
+  fetchAdminContentItems,
+  upsertAdminContentConfig,
+  updateAdminContentItem,
+} from "../../lib/api";
 import { useToast } from "../../components/ui/Toast";
+import type { CaseStudy, ContentTabType, FAQItem, Partner, Testimonial } from "../../lib/types";
+import ContentItemDialog from "../../components/admin/content/ContentItemDialog";
 
-type TabKey = "partners" | "testimonials" | "case-studies" | "faqs" | "config";
+type TabKey = ContentTabType | "config";
+type ContentRow = Partner | Testimonial | CaseStudy | FAQItem;
+
+const TAB_LIST: TabKey[] = ["partners", "testimonials", "case-studies", "faqs", "config"];
+
+function tabLabel(key: TabKey) {
+  if (key === "case-studies") return "Case Studies";
+  if (key === "faqs") return "FAQs";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function addLabel(key: ContentTabType) {
+  if (key === "partners") return "Add partners";
+  if (key === "testimonials") return "Add testimonials";
+  if (key === "case-studies") return "Add case studies";
+  return "Add FAQs";
+}
+
+function rowTitle(tab: ContentTabType, row: ContentRow) {
+  if (tab === "partners") return (row as Partner).name;
+  if (tab === "testimonials") return (row as Testimonial).name;
+  if (tab === "case-studies") return (row as CaseStudy).title;
+  return (row as FAQItem).question;
+}
 
 export default function ContentManagementPage() {
   const { push } = useToast();
-  const [tab, setTab] = useState<TabKey>("partners");
-  const [rows, setRows] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<TabKey>("partners");
+
+  const [contentRows, setContentRows] = useState<Record<ContentTabType, ContentRow[]>>({
+    partners: [],
+    testimonials: [],
+    "case-studies": [],
+    faqs: [],
+  });
+  const [loading, setLoading] = useState(false);
+
   const [jsonValue, setJsonValue] = useState("{}");
 
-  const endpoint = useMemo(() => (tab === "config" ? "/admin/content/config" : `/admin/content/${tab}`), [tab]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [dialogType, setDialogType] = useState<ContentTabType>("partners");
+  const [selectedItem, setSelectedItem] = useState<ContentRow | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const load = async () => {
+  const loadTab = async (tab: ContentTabType) => {
+    setLoading(true);
     try {
-      if (tab === "config") {
-        setRows([]);
-        return;
-      }
-      const res = await api.get(endpoint);
-      const key = tab.replace("-", "_");
-      setRows((res.data?.data?.[key] || res.data?.data?.[tab] || []) as any[]);
+      const rows = await fetchAdminContentItems(tab);
+      setContentRows((prev) => ({ ...prev, [tab]: rows }));
     } catch (err: any) {
       push("error", err?.response?.data?.detail || "Failed to load content.");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
+    if (activeTab === "config") {
+      (async () => {
+        const cfg = await fetchAdminContentConfig();
+        setJsonValue(JSON.stringify(cfg, null, 2));
+      })();
+      return;
+    }
+    void loadTab(activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [activeTab]);
 
-  const createBasic = async () => {
+  const currentRows = useMemo(() => {
+    if (activeTab === "config") return [] as ContentRow[];
+    return contentRows[activeTab] || [];
+  }, [activeTab, contentRows]);
+
+  const openCreate = (tab: ContentTabType) => {
+    setDialogType(tab);
+    setDialogMode("create");
+    setSelectedItem(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (tab: ContentTabType, row: ContentRow) => {
+    setDialogType(tab);
+    setDialogMode("edit");
+    setSelectedItem(row);
+    setDialogOpen(true);
+  };
+
+  const submitDialog = async (payload: Record<string, unknown>) => {
+    setSaving(true);
     try {
-      if (tab === "partners") {
-        await api.post(endpoint, { name: "New Partner", logo_url: "https://example.com/logo.svg", href: "", order: rows.length, active: true });
-      } else if (tab === "testimonials") {
-        await api.post(endpoint, { name: "New Testimonial", title: "", org: "", quote: "Add quote", avatar_url: "", order: rows.length, active: true });
-      } else if (tab === "case-studies") {
-        await api.post(endpoint, { title: "New Case Study", org: "Organization", metric_1: "", metric_2: "", summary: "Add summary", href: "", order: rows.length, active: true });
-      } else if (tab === "faqs") {
-        await api.post(endpoint, { question: "New Question", answer: "Add answer", order: rows.length, active: true });
+      if (dialogMode === "create") {
+        await createAdminContentItem(dialogType, payload as any);
+        push("success", "Entry created.");
+      } else {
+        await updateAdminContentItem(dialogType, Number((selectedItem as any)?.id), payload as any);
+        push("success", "Entry updated.");
       }
-      push("success", "Entry created.");
-      await load();
+      setDialogOpen(false);
+      setSelectedItem(null);
+      await loadTab(dialogType);
     } catch (err: any) {
-      push("error", err?.response?.data?.detail || "Failed to create entry.");
+      push("error", err?.response?.data?.detail || "Failed to save entry.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const remove = async (id: number) => {
+  const remove = async (tab: ContentTabType, id: number) => {
     try {
-      await api.delete(`${endpoint}/${id}`);
+      await deleteAdminContentItem(tab, id);
       push("success", "Entry deleted.");
-      await load();
+      await loadTab(tab);
     } catch (err: any) {
       push("error", err?.response?.data?.detail || "Failed to delete entry.");
     }
@@ -63,7 +133,7 @@ export default function ContentManagementPage() {
   const saveConfig = async () => {
     try {
       const parsed = JSON.parse(jsonValue);
-      await api.put("/admin/content/config", { key: "org_type_copy", value_json: parsed });
+      await upsertAdminContentConfig("org_type_copy", parsed);
       push("success", "Config saved.");
     } catch {
       push("error", "Invalid JSON for config.");
@@ -74,28 +144,28 @@ export default function ContentManagementPage() {
     <div className="space-y-4">
       <section className="surface-card-strong rounded-3xl p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
-          {(["partners", "testimonials", "case-studies", "faqs", "config"] as TabKey[]).map((key) => (
+          {TAB_LIST.map((key) => (
             <button
               key={key}
-              className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === key ? "bg-slate-900 text-white" : "bg-white/70 text-slate-700"}`}
-              onClick={() => setTab(key)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === key ? "bg-slate-900 text-white" : "bg-white/70 text-slate-700"}`}
+              onClick={() => setActiveTab(key)}
             >
-              {key === "case-studies" ? "Case Studies" : key.charAt(0).toUpperCase() + key.slice(1)}
+              {tabLabel(key)}
             </button>
           ))}
         </div>
       </section>
 
       <section className="surface-card-strong rounded-3xl p-4 sm:p-5">
-        {tab === "config" ? (
+        {activeTab === "config" ? (
           <>
-            <p className="text-sm text-slate-700">Update public config JSON (saved under key: `org_type_copy`).</p>
+            <p className="text-sm text-slate-700">Update config JSON.</p>
             <textarea className="ui-input mt-3 min-h-[240px] font-mono text-xs" value={jsonValue} onChange={(e) => setJsonValue(e.target.value)} />
             <button className="btn-primary mt-3" onClick={saveConfig}>Save Config</button>
           </>
         ) : (
           <>
-            <button className="btn-primary mb-3" onClick={createBasic}>Add {tab}</button>
+            <button className="btn-primary mb-3" onClick={() => openCreate(activeTab)}>{addLabel(activeTab)}</button>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
@@ -107,17 +177,20 @@ export default function ContentManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-b border-emerald-100/70">
-                      <td className="px-2 py-2">{row.id}</td>
-                      <td className="px-2 py-2">{row.name || row.title || row.question || row.org || "-"}</td>
-                      <td className="px-2 py-2">{row.active ? "yes" : "no"}</td>
+                  {currentRows.map((row) => (
+                    <tr key={(row as any).id} className="border-b border-emerald-100/70">
+                      <td className="px-2 py-2">{(row as any).id}</td>
+                      <td className="px-2 py-2">{rowTitle(activeTab, row)}</td>
+                      <td className="px-2 py-2">{(row as any).active ? "yes" : "no"}</td>
                       <td className="px-2 py-2">
-                        <button className="btn-secondary px-3 py-1 text-xs" onClick={() => remove(row.id)}>Delete</button>
+                        <div className="flex gap-2">
+                          <button className="btn-secondary px-3 py-1 text-xs" onClick={() => openEdit(activeTab, row)}>Edit</button>
+                          <button className="btn-secondary px-3 py-1 text-xs text-red-700" onClick={() => remove(activeTab, Number((row as any).id))}>Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
-                  {rows.length === 0 && (
+                  {!loading && currentRows.length === 0 && (
                     <tr><td colSpan={4} className="px-2 py-5 text-center text-slate-500">No entries found.</td></tr>
                   )}
                 </tbody>
@@ -126,6 +199,20 @@ export default function ContentManagementPage() {
           </>
         )}
       </section>
+
+      <ContentItemDialog
+        open={dialogOpen}
+        mode={dialogMode}
+        type={dialogType}
+        initialValues={selectedItem}
+        loading={saving}
+        onClose={() => {
+          if (saving) return;
+          setDialogOpen(false);
+          setSelectedItem(null);
+        }}
+        onSubmit={submitDialog}
+      />
     </div>
   );
 }

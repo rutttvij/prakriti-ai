@@ -163,8 +163,7 @@ export default function WorkerRouteMapPage() {
 
   if (user && user.role !== "WASTE_WORKER") {
     return (
-      <div className="min-h-[60vh] bg-gradient-to-b from-emerald-50/70 to-white flex items-center">
-        <div className="max-w-xl mx-auto rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-6">
+      <div className="surface-card-strong rounded-[1.8rem] p-6">
           <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-3">
             Route map
           </span>
@@ -172,7 +171,6 @@ export default function WorkerRouteMapPage() {
           <p className="text-sm text-slate-600">
             This page is only for <span className="font-semibold text-emerald-800">Waste Workers</span>.
           </p>
-        </div>
       </div>
     );
   }
@@ -180,15 +178,16 @@ export default function WorkerRouteMapPage() {
   const hasCoords = geoReports.length > 0;
 
   return (
-    <div className="min-h-[70vh] bg-gradient-to-b from-emerald-50/70 to-white -m-4 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto space-y-5">
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
           <div>
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-2">
-              Waste Worker · Route map
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md mb-2">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Waste Worker · Route Map
             </span>
-            <h1 className="text-2xl md:text-3xl font-semibold text-emerald-900">Visit route planner</h1>
-            <p className="mt-1 text-sm text-slate-600 max-w-2xl">
+            <h1 className="text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Visit Route Planner</h1>
+            <p className="mt-1 text-sm text-emerald-100 max-w-2xl">
               Reports with coordinates are shown on the map. The route is ordered so the closest stops are attended first.
             </p>
           </div>
@@ -214,6 +213,7 @@ export default function WorkerRouteMapPage() {
             </button>
           </div>
         </div>
+      </section>
 
         {(err || geoErr) && (
           <div className="rounded-2xl border border-red-100 bg-red-50/70 px-4 py-3 text-sm text-red-700">
@@ -222,7 +222,7 @@ export default function WorkerRouteMapPage() {
         )}
 
         <div className="grid gap-4 lg:grid-cols-[1.25fr,0.75fr]">
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm overflow-hidden">
+          <div className="surface-card-strong rounded-[1.8rem] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-100">
               <div className="text-sm font-semibold text-emerald-900">Map</div>
               <div className="text-[11px] text-slate-500">
@@ -291,7 +291,7 @@ export default function WorkerRouteMapPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-4">
+          <div className="surface-card-strong rounded-[1.8rem] p-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-emerald-900">Today’s stop order</h2>
               <span className="text-[11px] text-slate-500">
@@ -374,7 +374,6 @@ export default function WorkerRouteMapPage() {
             )}
           </div>
         </div>
-      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.api import deps
 from app.models.user import User, UserRole
 from app.models.waste_report import WasteReport, WasteReportStatus
@@ -199,10 +200,7 @@ def classify_image_with_model(image_bytes: bytes) -> WasteClassificationResponse
 
 router = APIRouter(prefix="/waste", tags=["waste_reporting"])
 
-UPLOAD_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)),
-    "..", "uploads", "waste_reports",
-)
+UPLOAD_DIR = os.path.join(settings.MEDIA_ROOT, "waste_reports")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 

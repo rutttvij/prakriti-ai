@@ -266,6 +266,77 @@ export type AdminPccTransaction = {
   amount_pcc: number;
   reason?: string | null;
   created_at: string;
+  ref_type?: string | null;
+  ref_id?: number | null;
+  created_by_user_id?: number | null;
+};
+
+export type AdminPccTransactionsResponse = {
+  items: AdminPccTransaction[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_credited: number;
+  total_debited: number;
+  net_pcc: number;
+  transactions_count: number;
+};
+
+export type PccReferenceType = "citizen_log" | "bulk_log";
+
+export type PccActionResponse = {
+  reference_type: PccReferenceType;
+  reference_id: number;
+  transaction_id: number;
+  amount: number;
+  pcc_status: "awarded" | "revoked" | string;
+};
+
+export type PccBulkAwardResponse = {
+  awarded: { reference_type: PccReferenceType; reference_id: number; amount: number }[];
+  skipped: { reference_type: PccReferenceType; reference_id: number; reason: string }[];
+};
+
+export type CitizenSegregationLogItem = {
+  id: number;
+  user_id: number;
+  user_name?: string | null;
+  household?: string | null;
+  waste_category?: string | null;
+  weight_kg: number;
+  quality_score?: number | null;
+  quality_level?: string | null;
+  pcc_status: "pending" | "awarded" | "revoked" | string;
+  awarded_pcc_amount?: number | null;
+  created_at: string;
+  evidence_image_url?: string | null;
+};
+
+export type CitizenSegregationLogListResponse = {
+  items: CitizenSegregationLogItem[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type BulkGeneratorLogItem = {
+  id: number;
+  user_id: number;
+  org_name?: string | null;
+  waste_category?: string | null;
+  weight_kg: number;
+  quality_level?: string | null;
+  verification_status: "pending" | "verified" | "rejected" | string;
+  pcc_status: "pending" | "awarded" | "revoked" | string;
+  awarded_pcc_amount?: number | null;
+  created_at: string;
+};
+
+export type BulkGeneratorLogListResponse = {
+  items: BulkGeneratorLogItem[];
+  total: number;
+  page: number;
+  page_size: number;
 };
 
 export type AdminAuditLog = {
@@ -288,4 +359,158 @@ export type PlatformSettings = {
     enable_pcc_calculator: boolean;
     [k: string]: boolean;
   };
+};
+
+export type PccSettings = {
+  pcc_unit_kgco2e: number;
+  quality_multipliers: Record<string, number>;
+  updated_at: string;
+};
+
+export type EmissionFactorItem = {
+  id: number;
+  waste_category: string;
+  kgco2e_per_kg: number;
+  active: boolean;
+  updated_at: string;
+};
+
+export type ContentTabType = "partners" | "testimonials" | "case-studies" | "faqs";
+
+export type PartnerPayload = {
+  name: string;
+  logo_url?: string | null;
+  href?: string | null;
+  active: boolean;
+  order?: number | null;
+};
+
+export type CitizenHousehold = {
+  id: number;
+  name: string;
+  city?: string | null;
+  ward_zone?: string | null;
+  address?: string | null;
+  pincode?: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type CitizenWasteReport = {
+  id: number;
+  public_id?: string | null;
+  user_id: number;
+  household_id?: number | null;
+  description?: string | null;
+  file_path?: string | null;
+  image_url?: string | null;
+  classification_label?: string | null;
+  classification_confidence?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  status: "pending" | "resolved" | string;
+  created_at: string;
+  resolved_at?: string | null;
+};
+
+export type CitizenSegregationLog = {
+  id: number;
+  household_id: number;
+  user_id: number;
+  log_date: string;
+  dry_kg: number;
+  wet_kg: number;
+  reject_kg: number;
+  score: number;
+  quality_level: "low" | "medium" | "high" | string;
+  evidence_image_url?: string | null;
+  pcc_status: "pending" | "awarded" | "revoked" | string;
+  awarded_pcc_amount?: number | null;
+  awarded_at?: string | null;
+  created_at: string;
+};
+
+export type CitizenSegregationSummary = {
+  avg_score: number;
+  totals: {
+    dry_total: number;
+    wet_total: number;
+    reject_total: number;
+  };
+  estimated_pcc_preview: number;
+  weekly_score_points: { week_label: string; avg_score: number }[];
+  weekly_breakdown: { week_label: string; dry_kg: number; wet_kg: number; reject_kg: number }[];
+  recent_logs: { date: string; dry: number; wet: number; reject: number; score: number }[];
+};
+
+export type CitizenPccSummary = {
+  total_credited: number;
+  total_debited: number;
+  net_pcc: number;
+  co2_saved_kg: number;
+};
+
+export type CitizenTrainingModule = {
+  id: number;
+  title: string;
+  summary?: string | null;
+  content_json: Record<string, unknown>;
+  order_index: number;
+  lessons?: TrainingLesson[];
+};
+
+export type CitizenBadge = {
+  id: number;
+  code?: string | null;
+  title: string;
+  description?: string | null;
+  awarded_at: string;
+};
+
+export type CitizenTrainingSummary = {
+  total_modules_published: number;
+  completed_count: number;
+  completed_module_ids?: number[];
+  progress_percent: number;
+  badges_count: number;
+  next_module?: CitizenTrainingModule | null;
+  badges: CitizenBadge[];
+};
+
+export type TrainingProgressItem = {
+  id: number;
+  module_id: number;
+  user_id: number;
+  completed: boolean;
+  score?: number | null;
+  completed_at?: string | null;
+};
+
+export type TestimonialPayload = {
+  name: string;
+  title?: string | null;
+  org?: string | null;
+  quote: string;
+  avatar_url?: string | null;
+  active: boolean;
+  order?: number | null;
+};
+
+export type CaseStudyPayload = {
+  title: string;
+  org: string;
+  metric_1?: string | null;
+  metric_2?: string | null;
+  summary: string;
+  href?: string | null;
+  active: boolean;
+  order?: number | null;
+};
+
+export type FAQPayload = {
+  question: string;
+  answer: string;
+  active: boolean;
+  order?: number | null;
 };

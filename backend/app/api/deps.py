@@ -58,3 +58,32 @@ def require_roles(*roles: UserRole):
         return current_user
 
     return _checker
+
+
+def require_super_admin_or_verified_worker(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role == UserRole.SUPER_ADMIN:
+        return current_user
+
+    if current_user.role == UserRole.WASTE_WORKER:
+        meta = current_user.meta or {}
+        is_verified = bool(
+            meta.get("is_verified")
+            or meta.get("verified")
+            or str(meta.get("verification_status", "")).lower() == "verified"
+        )
+        if is_verified:
+            return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only Super Admin or verified Waste Worker can perform this action.",
+    )
+
+
+def require_citizen(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.CITIZEN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Citizen role required.",
+        )
+    return current_user

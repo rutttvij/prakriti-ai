@@ -38,8 +38,7 @@ export default function WorkerSegregationPage() {
   // Restrict page to waste workers
   if (user && user.role !== "WASTE_WORKER") {
     return (
-      <div className="min-h-[60vh] bg-gradient-to-b from-emerald-50/70 to-white flex items-center">
-        <div className="max-w-xl mx-auto rounded-2xl border border-emerald-100 bg-white/80 shadow-sm p-6">
+      <div className="surface-card-strong rounded-[1.8rem] p-6">
           <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-3">
             Segregation workspace
           </span>
@@ -55,7 +54,6 @@ export default function WorkerSegregationPage() {
             generators. Please switch to a waste worker account or contact your
             city admin if you think this is a mistake.
           </p>
-        </div>
       </div>
     );
   }
@@ -248,29 +246,21 @@ export default function WorkerSegregationPage() {
   }, [logs]);
 
   return (
-    <div className="min-h-[70vh] bg-gradient-to-b from-emerald-50/70 to-white -m-4 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 mb-2">
-              Waste Worker · Daily Segregation
-            </span>
-            <h1 className="text-2xl md:text-3xl font-semibold text-emerald-900">
-              Segregation dashboard
-            </h1>
-            <p className="mt-1 text-sm text-slate-600 max-w-2xl">
-              Record daily segregation by weight (kg). Every compliant log
-              boosts your PCC rewards and helps your city track real-time
-              carbon savings.
-            </p>
-          </div>
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/16 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-emerald-100 shadow-sm shadow-emerald-950/30 backdrop-blur-md">
+          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Waste Worker · Segregation
         </div>
+        <h1 className="mt-3 text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Segregation Logs</h1>
+        <p className="mt-1 text-sm text-emerald-100">
+          Record daily segregation quality and link logs to assigned waste reports.
+        </p>
+      </section>
 
         {/* Context banner if coming from a report */}
         {fromReportCode && (
-          <div className="max-w-6xl mx-auto -mt-2">
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-2.5 text-xs text-emerald-900 flex flex-wrap items-center justify-between gap-2">
+          <div className="surface-card-strong rounded-2xl px-4 py-2.5 text-xs text-emerald-900 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <span className="font-semibold">
                   Logging segregation for report:
@@ -295,13 +285,12 @@ export default function WorkerSegregationPage() {
                   Back to report
                 </button>
               )}
-            </div>
           </div>
         )}
 
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-emerald-100/80 bg-white/80 shadow-md shadow-emerald-100/70 backdrop-blur-sm p-4">
+          <div className="surface-card-strong rounded-[1.6rem] p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
               Total logs
             </p>
@@ -313,7 +302,7 @@ export default function WorkerSegregationPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50 to-white shadow-md shadow-emerald-100/70 backdrop-blur-sm p-4">
+          <div className="surface-card-strong rounded-[1.6rem] p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
               Avg segregation score
             </p>
@@ -325,7 +314,7 @@ export default function WorkerSegregationPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100/80 bg-white/80 shadow-md shadow-emerald-100/70 backdrop-blur-sm p-4">
+          <div className="surface-card-strong rounded-[1.6rem] p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
               Unique sites covered
             </p>
@@ -343,7 +332,7 @@ export default function WorkerSegregationPage() {
           {/* Form */}
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5 space-y-4"
+            className="surface-card-strong rounded-[1.8rem] p-5 space-y-4"
           >
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-sm font-semibold text-emerald-900">
@@ -487,7 +476,7 @@ export default function WorkerSegregationPage() {
           </form>
 
           {/* Chart */}
-          <div className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5">
+          <div className="surface-card-strong rounded-[1.8rem] p-5">
             <h2 className="text-sm font-semibold text-emerald-900 mb-2">
               14-day compliance trend
             </h2>
@@ -525,7 +514,7 @@ export default function WorkerSegregationPage() {
         </div>
 
         {/* Recent Logs */}
-        <div className="rounded-2xl border border-emerald-100 bg-white/90 shadow-sm p-5">
+        <div className="surface-card-strong rounded-[1.8rem] p-5">
           <div className="flex items-center justify-between mb-3 gap-2">
             <h2 className="text-sm font-semibold text-emerald-900">
               Recent logs
@@ -601,7 +590,6 @@ export default function WorkerSegregationPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

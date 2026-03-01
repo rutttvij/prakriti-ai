@@ -157,10 +157,36 @@ export const AdminTrainingPage: React.FC = () => {
 
   const addLesson = async () => {
     if (!detailModule) return;
-    if (!lessonForm.title.trim() || !lessonForm.content.trim()) return;
+    const rawTitle = lessonForm.title.trim();
+    const rawContent = lessonForm.content.trim();
+    if (!rawContent) {
+      setError("Lesson content is required.");
+      return;
+    }
+
+    let resolvedTitle = rawTitle;
+    if (!resolvedTitle) {
+      if (lessonForm.lesson_type === "link") {
+        try {
+          const parsed = new URL(rawContent);
+          resolvedTitle = parsed.hostname || "Reference link";
+        } catch {
+          resolvedTitle = "Reference link";
+        }
+      } else {
+        setError("Lesson title is required.");
+        return;
+      }
+    }
+
     try {
-      await createTrainingLesson(detailModule.id, lessonForm);
+      await createTrainingLesson(detailModule.id, {
+        lesson_type: lessonForm.lesson_type,
+        title: resolvedTitle,
+        content: rawContent,
+      });
       setLessonForm({ lesson_type: "article", title: "", content: "" });
+      setError(null);
       setDetailModule(await fetchAdminTrainingModule(detailModule.id));
       await loadModules();
     } catch (e: any) {
@@ -373,8 +399,18 @@ export const AdminTrainingPage: React.FC = () => {
               <option value="quiz">quiz</option>
               <option value="link">link</option>
             </select>
-            <input className="ui-input" placeholder="Lesson title" value={lessonForm.title} onChange={(e) => setLessonForm((p) => ({ ...p, title: e.target.value }))} />
-            <input className="ui-input" placeholder="URL or content" value={lessonForm.content} onChange={(e) => setLessonForm((p) => ({ ...p, content: e.target.value }))} />
+            <input
+              className="ui-input"
+              placeholder={lessonForm.lesson_type === "link" ? "Lesson title (optional for link)" : "Lesson title"}
+              value={lessonForm.title}
+              onChange={(e) => setLessonForm((p) => ({ ...p, title: e.target.value }))}
+            />
+            <input
+              className="ui-input"
+              placeholder={lessonForm.lesson_type === "link" ? "https://example.com/resource" : "URL or content"}
+              value={lessonForm.content}
+              onChange={(e) => setLessonForm((p) => ({ ...p, content: e.target.value }))}
+            />
             <button className="btn-primary px-4" onClick={addLesson}>Add</button>
           </div>
 

@@ -21,6 +21,7 @@ from app.api import contact as contact_router
 from app.api import facilities as facilities_router
 from app.api import segregation as segregation_router
 from app.api import training as training_router
+from app.api import waste as waste_file_router
 from app.api import waste_reporting as waste_router
 from app.api.v1 import admin_content as admin_content_router
 from app.api.v1 import admin_ops as admin_ops_router
@@ -73,6 +74,7 @@ def ensure_pcc_schema_compat() -> None:
         conn.execute(text("ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS user_id INTEGER NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS balance_pcc DOUBLE PRECISION NOT NULL DEFAULT 0.0;"))
+        conn.execute(text("ALTER TABLE IF EXISTS wallets ALTER COLUMN bulk_generator_id DROP NOT NULL;"))
 
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS user_id INTEGER NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;"))
@@ -81,6 +83,7 @@ def ensure_pcc_schema_compat() -> None:
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS reason VARCHAR(500) NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS ref_type VARCHAR(50) NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS ref_id INTEGER NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER NULL;"))
 
         conn.execute(text("ALTER TABLE IF EXISTS badges ADD COLUMN IF NOT EXISTS code VARCHAR(120) NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS badges ADD COLUMN IF NOT EXISTS threshold DOUBLE PRECISION NULL;"))
@@ -216,6 +219,175 @@ def ensure_pcc_schema_compat() -> None:
         conn.execute(text("UPDATE training_modules SET summary = COALESCE(summary, description) WHERE summary IS NULL;"))
         conn.execute(text("UPDATE training_modules SET is_active = COALESCE(is_active, FALSE);"))
         conn.execute(text("UPDATE training_modules SET is_published = COALESCE(is_published, is_active, FALSE);"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS waste_category VARCHAR(64) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS weight_kg DOUBLE PRECISION NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS quality_score DOUBLE PRECISION NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS quality_level VARCHAR(16) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS evidence_image_url VARCHAR(600) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS pcc_status VARCHAR(16) NOT NULL DEFAULT 'pending';"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS awarded_pcc_amount DOUBLE PRECISION NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS awarded_at TIMESTAMPTZ NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS segregation_logs ADD COLUMN IF NOT EXISTS awarded_by_user_id INTEGER NULL;"))
+        conn.execute(
+            text(
+                """
+                WITH ranked AS (
+                    SELECT
+                        id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY household_id, log_date
+                            ORDER BY created_at DESC NULLS LAST, id DESC
+                        ) AS rn
+                    FROM segregation_logs
+                    WHERE household_id IS NOT NULL
+                      AND log_date IS NOT NULL
+                )
+                DELETE FROM segregation_logs s
+                USING ranked r
+                WHERE s.id = r.id
+                  AND r.rn > 1;
+                """
+            )
+        )
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_household_log_date ON segregation_logs(household_id, log_date);"))
+        conn.execute(text("ALTER TABLE IF EXISTS households ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();"))
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS household_members (
+                    id SERIAL PRIMARY KEY,
+                    household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE(household_id, user_id)
+                );
+                """
+            )
+        )
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_household_members_user_id ON household_members(user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_household_members_household_id ON household_members(household_id);"))
+        conn.execute(
+            text(
+                """
+                INSERT INTO household_members (household_id, user_id, is_primary, created_at)
+                SELECT h.id, h.owner_user_id, COALESCE(h.is_primary, FALSE), COALESCE(h.created_at, now())
+                FROM households h
+                WHERE h.owner_user_id IS NOT NULL
+                  AND NOT EXISTS (
+                      SELECT 1 FROM household_members hm
+                      WHERE hm.household_id = h.id AND hm.user_id = h.owner_user_id
+                  );
+                """
+            )
+        )
+        conn.execute(text("ALTER TABLE IF EXISTS training_modules ADD COLUMN IF NOT EXISTS content_json JSONB NOT NULL DEFAULT '{}'::jsonb;"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_training_progress_user_module ON training_progress(user_id, module_id);"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_user_badges_user_badge ON user_badges(user_id, badge_id);"))
+        conn.execute(
+            text(
+                """
+                UPDATE badges
+                SET name = 'Green Starter',
+                    description = 'Completed your first citizen training module.',
+                    category = 'TRAINING',
+                    criteria_key = 'citizen_training_first_module',
+                    is_active = TRUE,
+                    active = TRUE
+                WHERE code = 'GREEN_STARTER' OR criteria_key = 'citizen_training_first_module';
+
+                INSERT INTO badges (code, name, description, category, criteria_key, is_active, active, created_at)
+                SELECT 'GREEN_STARTER', 'Green Starter', 'Completed your first citizen training module.', 'TRAINING', 'citizen_training_first_module', TRUE, TRUE, now()
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM badges WHERE code = 'GREEN_STARTER' OR criteria_key = 'citizen_training_first_module'
+                );
+
+                UPDATE badges
+                SET name = 'Certified Citizen',
+                    description = 'Completed all published citizen training modules.',
+                    category = 'TRAINING',
+                    criteria_key = 'citizen_training_all_modules',
+                    is_active = TRUE,
+                    active = TRUE
+                WHERE code = 'CERTIFIED_CITIZEN' OR criteria_key = 'citizen_training_all_modules';
+
+                INSERT INTO badges (code, name, description, category, criteria_key, is_active, active, created_at)
+                SELECT 'CERTIFIED_CITIZEN', 'Certified Citizen', 'Completed all published citizen training modules.', 'TRAINING', 'citizen_training_all_modules', TRUE, TRUE, now()
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM badges WHERE code = 'CERTIFIED_CITIZEN' OR criteria_key = 'citizen_training_all_modules'
+                );
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO platform_settings (key, value_json, description, created_at, updated_at)
+                VALUES ('pcc_unit_kgco2e', '10.0'::jsonb, 'PCC conversion unit. 1 PCC = X kgCO2e.', now(), now())
+                ON CONFLICT (key) DO NOTHING;
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO emission_factors (category, kgco2e_per_kg, active, created_at, updated_at)
+                VALUES
+                  ('dry', 1.0, TRUE, now(), now()),
+                  ('wet', 0.5, TRUE, now(), now()),
+                  ('reject', 1.5, TRUE, now(), now())
+                ON CONFLICT (category) DO UPDATE
+                SET kgco2e_per_kg = EXCLUDED.kgco2e_per_kg,
+                    active = TRUE,
+                    updated_at = now();
+                """
+            )
+        )
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS verification_status VARCHAR(16) NOT NULL DEFAULT 'pending';"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS quality_level VARCHAR(16) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS pcc_status VARCHAR(16) NOT NULL DEFAULT 'pending';"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS awarded_pcc_amount DOUBLE PRECISION NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS awarded_at TIMESTAMPTZ NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS awarded_by_user_id INTEGER NULL;"))
+
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    title VARCHAR(255) NOT NULL,
+                    body TEXT NOT NULL,
+                    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+                """
+            )
+        )
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_user_id ON notifications(user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_is_read ON notifications(is_read);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_created_at ON notifications(created_at DESC);"))
+        conn.execute(
+            text(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_transactions_single_credit_per_reference
+                ON transactions(ref_type, ref_id)
+                WHERE ref_type IN ('citizen_log', 'bulk_log') AND ref_id IS NOT NULL AND tx_type = 'CREDIT';
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO emission_factors (category, kgco2e_per_kg, active, created_at, updated_at)
+                VALUES ('mixed', 1.0, TRUE, now(), now())
+                ON CONFLICT (category) DO UPDATE
+                SET kgco2e_per_kg = EXCLUDED.kgco2e_per_kg,
+                    active = TRUE,
+                    updated_at = now();
+                """
+            )
+        )
 
         conn.execute(
             text(
@@ -306,7 +478,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     # --- Static uploads (waste report images, etc.) ---
-    uploads_dir = Path(settings.MEDIA_ROOT).resolve()
+    uploads_dir = Path("uploads").resolve()
     uploads_dir.mkdir(parents=True, exist_ok=True)
     app.mount(
         "/uploads",
@@ -326,6 +498,7 @@ def create_app() -> FastAPI:
     # Core modules
     app.include_router(training_router.router, prefix=api_prefix)
     app.include_router(segregation_router.router, prefix=api_prefix)
+    app.include_router(waste_file_router.router, prefix=api_prefix)
     app.include_router(waste_router.router, prefix=api_prefix)
     app.include_router(facilities_router.router, prefix=api_prefix)
     app.include_router(bulk_router.router, prefix=api_prefix)

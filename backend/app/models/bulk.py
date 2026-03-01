@@ -111,6 +111,12 @@ class WasteLog(Base):
     photo_path = Column(String(500), nullable=False)
     image_url = Column(String(500), nullable=True)
     notes = Column(String(1000), nullable=True)
+    verification_status = Column(String(16), nullable=False, default="pending", index=True)
+    quality_level = Column(String(16), nullable=True, index=True)
+    pcc_status = Column(String(16), nullable=False, default="pending", index=True)
+    awarded_pcc_amount = Column(Float, nullable=True)
+    awarded_at = Column(DateTime(timezone=True), nullable=True)
+    awarded_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     status = Column(
         Enum(WasteLogStatus, name="wastelogstatus"),
@@ -124,6 +130,7 @@ class WasteLog(Base):
     bulk_generator = relationship("BulkGenerator", back_populates="waste_logs")
     created_by = relationship("User", foreign_keys=[created_by_user_id], backref="created_waste_logs")
     user = relationship("User", foreign_keys=[user_id], backref="pcc_waste_logs")
+    awarded_by = relationship("User", foreign_keys=[awarded_by_user_id], backref="awarded_bulk_waste_logs")
     pickup_requests = relationship("PickupRequest", back_populates="waste_log")
     verification = relationship("Verification", back_populates="waste_log", uselist=False)
 
@@ -206,6 +213,7 @@ class Transaction(Base):
     wallet_id = Column(Integer, ForeignKey("wallets.id"), nullable=False, index=True)
     verification_id = Column(Integer, ForeignKey("verifications.id"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     org_id = Column(Integer, nullable=True, index=True)
 
     tx_type = Column(Enum(TransactionType, name="transactiontype"), nullable=False, default=TransactionType.CREDIT)
@@ -226,3 +234,4 @@ class Transaction(Base):
 
     wallet = relationship("Wallet", back_populates="transactions")
     verification = relationship("Verification", backref="transactions")
+    actor = relationship("User", foreign_keys=[created_by_user_id], backref="issued_transactions")

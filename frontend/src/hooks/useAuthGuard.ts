@@ -9,7 +9,7 @@ export function useAuthGuard(options?: { requireAuth?: boolean }) {
 
   useEffect(() => {
     if (!loading && requireAuth && !user) {
-      navigate("/login");
+      navigate("/auth/login");
     }
   }, [loading, user, requireAuth, navigate]);
 

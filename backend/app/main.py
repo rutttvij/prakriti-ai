@@ -23,6 +23,7 @@ from app.api import segregation as segregation_router
 from app.api import training as training_router
 from app.api import waste_reporting as waste_router
 from app.api.v1 import admin_content as admin_content_router
+from app.api.v1 import admin_ops as admin_ops_router
 from app.api.v1 import admin_contact_messages as admin_contact_messages_router
 from app.api.v1 import admin_demo_requests as admin_demo_requests_router
 from app.api.v1 import admin_training as admin_training_router
@@ -338,6 +339,7 @@ def create_app() -> FastAPI:
     app.include_router(pcc_router.router, prefix=api_prefix)
     app.include_router(public_router.router, prefix=api_prefix)
     app.include_router(admin_content_router.router, prefix=api_prefix)
+    app.include_router(admin_ops_router.router, prefix=api_prefix)
     app.include_router(admin_training_router.router, prefix=api_prefix)
     app.include_router(admin_demo_requests_router.router, prefix=api_prefix)
     app.include_router(admin_contact_messages_router.router, prefix=api_prefix)

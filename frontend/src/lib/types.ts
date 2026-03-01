@@ -202,3 +202,90 @@ export type AdminContactMessageListResponse = {
   page: number;
   page_size: number;
 };
+
+export type AdminAnalyticsSummary = {
+  kpis: {
+    total_users: number;
+    active_users: number;
+    pending_approvals: number;
+    total_zones: number;
+    workforce_count: number;
+    open_demo_requests: number;
+    unread_contact_messages: number;
+  };
+  recent_activity: {
+    kind: "demo_request" | "contact_message" | "audit_log";
+    id: number;
+    title: string;
+    subtitle?: string | null;
+    created_at: string;
+  }[];
+};
+
+export type AdminApproval = {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  created_at?: string | null;
+};
+
+export type AdminZone = {
+  id: number;
+  name: string;
+  type: string;
+  city: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminWorkforceUser = {
+  user_id: number;
+  full_name?: string | null;
+  email: string;
+  role: string;
+  is_active: boolean;
+  zone_id?: number | null;
+  zone_name?: string | null;
+};
+
+export type AdminPccSummary = {
+  total_credited: number;
+  total_debited: number;
+  net_pcc: number;
+  tx_count: number;
+};
+
+export type AdminPccTransaction = {
+  id: number;
+  user_id?: number | null;
+  type: string;
+  amount_pcc: number;
+  reason?: string | null;
+  created_at: string;
+};
+
+export type AdminAuditLog = {
+  id: number;
+  actor_user_id?: number | null;
+  actor_email?: string | null;
+  action: string;
+  entity: string;
+  entity_id?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type PlatformSettings = {
+  pcc_unit_kgco2e: number;
+  emission_factors: Record<string, number>;
+  quality_multipliers: Record<string, number>;
+  feature_flags: {
+    enable_training_modules: boolean;
+    enable_pcc_calculator: boolean;
+    [k: string]: boolean;
+  };
+};

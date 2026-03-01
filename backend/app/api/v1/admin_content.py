@@ -25,6 +25,7 @@ from app.schemas.marketing import (
     TestimonialUpdate,
 )
 from app.services.marketing_service import upsert_config
+from app.services.admin_audit_service import log_admin_action
 
 router = APIRouter(prefix="/admin/content", tags=["admin-content"])
 
@@ -61,29 +62,34 @@ def list_partners_admin(db: Session = Depends(get_db), _: User = Depends(deps.re
 
 
 @router.post("/partners", response_model=APIEnvelope, status_code=status.HTTP_201_CREATED)
-def create_partner(payload: PartnerCreate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def create_partner(payload: PartnerCreate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = MarketingPartner(**payload.model_dump())
     db.add(row)
+    db.flush()
+    log_admin_action(db, actor=current_user, action="create", entity="partner", entity_id=row.id, metadata=payload.model_dump())
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Partner created.", data={"partner": _serialize(row, ["id", "name", "logo_url", "href", "order", "active"])})
 
 
 @router.put("/partners/{partner_id}", response_model=APIEnvelope)
-def update_partner(partner_id: int, payload: PartnerUpdate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def update_partner(partner_id: int, payload: PartnerUpdate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingPartner, partner_id)
-    for k, v in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    for k, v in updates.items():
         setattr(row, k, v)
     db.add(row)
+    log_admin_action(db, actor=current_user, action="update", entity="partner", entity_id=row.id, metadata=updates)
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Partner updated.", data={"partner": _serialize(row, ["id", "name", "logo_url", "href", "order", "active"])})
 
 
 @router.delete("/partners/{partner_id}", response_model=APIEnvelope)
-def delete_partner(partner_id: int, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def delete_partner(partner_id: int, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingPartner, partner_id)
     db.delete(row)
+    log_admin_action(db, actor=current_user, action="delete", entity="partner", entity_id=partner_id)
     _commit(db)
     return APIEnvelope(message="Partner deleted.", data={})
 
@@ -95,29 +101,34 @@ def list_testimonials_admin(db: Session = Depends(get_db), _: User = Depends(dep
 
 
 @router.post("/testimonials", response_model=APIEnvelope, status_code=status.HTTP_201_CREATED)
-def create_testimonial(payload: TestimonialCreate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def create_testimonial(payload: TestimonialCreate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = MarketingTestimonial(**payload.model_dump())
     db.add(row)
+    db.flush()
+    log_admin_action(db, actor=current_user, action="create", entity="testimonial", entity_id=row.id, metadata=payload.model_dump())
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Testimonial created.", data={"testimonial": _serialize(row, ["id", "name", "title", "org", "quote", "avatar_url", "order", "active"])})
 
 
 @router.put("/testimonials/{testimonial_id}", response_model=APIEnvelope)
-def update_testimonial(testimonial_id: int, payload: TestimonialUpdate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def update_testimonial(testimonial_id: int, payload: TestimonialUpdate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingTestimonial, testimonial_id)
-    for k, v in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    for k, v in updates.items():
         setattr(row, k, v)
     db.add(row)
+    log_admin_action(db, actor=current_user, action="update", entity="testimonial", entity_id=row.id, metadata=updates)
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Testimonial updated.", data={"testimonial": _serialize(row, ["id", "name", "title", "org", "quote", "avatar_url", "order", "active"])})
 
 
 @router.delete("/testimonials/{testimonial_id}", response_model=APIEnvelope)
-def delete_testimonial(testimonial_id: int, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def delete_testimonial(testimonial_id: int, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingTestimonial, testimonial_id)
     db.delete(row)
+    log_admin_action(db, actor=current_user, action="delete", entity="testimonial", entity_id=testimonial_id)
     _commit(db)
     return APIEnvelope(message="Testimonial deleted.", data={})
 
@@ -129,29 +140,34 @@ def list_case_studies_admin(db: Session = Depends(get_db), _: User = Depends(dep
 
 
 @router.post("/case-studies", response_model=APIEnvelope, status_code=status.HTTP_201_CREATED)
-def create_case_study(payload: CaseStudyCreate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def create_case_study(payload: CaseStudyCreate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = MarketingCaseStudy(**payload.model_dump())
     db.add(row)
+    db.flush()
+    log_admin_action(db, actor=current_user, action="create", entity="case_study", entity_id=row.id, metadata=payload.model_dump())
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Case study created.", data={"case_study": _serialize(row, ["id", "title", "org", "metric_1", "metric_2", "summary", "href", "order", "active"])})
 
 
 @router.put("/case-studies/{case_study_id}", response_model=APIEnvelope)
-def update_case_study(case_study_id: int, payload: CaseStudyUpdate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def update_case_study(case_study_id: int, payload: CaseStudyUpdate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingCaseStudy, case_study_id)
-    for k, v in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    for k, v in updates.items():
         setattr(row, k, v)
     db.add(row)
+    log_admin_action(db, actor=current_user, action="update", entity="case_study", entity_id=row.id, metadata=updates)
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Case study updated.", data={"case_study": _serialize(row, ["id", "title", "org", "metric_1", "metric_2", "summary", "href", "order", "active"])})
 
 
 @router.delete("/case-studies/{case_study_id}", response_model=APIEnvelope)
-def delete_case_study(case_study_id: int, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def delete_case_study(case_study_id: int, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingCaseStudy, case_study_id)
     db.delete(row)
+    log_admin_action(db, actor=current_user, action="delete", entity="case_study", entity_id=case_study_id)
     _commit(db)
     return APIEnvelope(message="Case study deleted.", data={})
 
@@ -163,36 +179,42 @@ def list_faqs_admin(db: Session = Depends(get_db), _: User = Depends(deps.requir
 
 
 @router.post("/faqs", response_model=APIEnvelope, status_code=status.HTTP_201_CREATED)
-def create_faq(payload: FAQCreate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def create_faq(payload: FAQCreate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = MarketingFAQ(**payload.model_dump())
     db.add(row)
+    db.flush()
+    log_admin_action(db, actor=current_user, action="create", entity="faq", entity_id=row.id, metadata=payload.model_dump())
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="FAQ created.", data={"faq": _serialize(row, ["id", "question", "answer", "order", "active"])})
 
 
 @router.put("/faqs/{faq_id}", response_model=APIEnvelope)
-def update_faq(faq_id: int, payload: FAQUpdate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def update_faq(faq_id: int, payload: FAQUpdate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingFAQ, faq_id)
-    for k, v in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    for k, v in updates.items():
         setattr(row, k, v)
     db.add(row)
+    log_admin_action(db, actor=current_user, action="update", entity="faq", entity_id=row.id, metadata=updates)
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="FAQ updated.", data={"faq": _serialize(row, ["id", "question", "answer", "order", "active"])})
 
 
 @router.delete("/faqs/{faq_id}", response_model=APIEnvelope)
-def delete_faq(faq_id: int, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def delete_faq(faq_id: int, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, MarketingFAQ, faq_id)
     db.delete(row)
+    log_admin_action(db, actor=current_user, action="delete", entity="faq", entity_id=faq_id)
     _commit(db)
     return APIEnvelope(message="FAQ deleted.", data={})
 
 
 @router.put("/config", response_model=APIEnvelope)
-def put_config(payload: MarketingConfigUpsert, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def put_config(payload: MarketingConfigUpsert, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = upsert_config(db, payload.key, payload.value_json)
+    log_admin_action(db, actor=current_user, action="update", entity="marketing_config", entity_id=payload.key, metadata={"key": payload.key})
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Config updated.", data={"config": _serialize(row, ["id", "key", "value_json"])})
@@ -212,10 +234,11 @@ def list_leads(
 
 
 @router.patch("/leads/{lead_id}", response_model=APIEnvelope)
-def patch_lead_status(lead_id: int, payload: LeadStatusUpdate, db: Session = Depends(get_db), _: User = Depends(deps.require_super_admin)):
+def patch_lead_status(lead_id: int, payload: LeadStatusUpdate, db: Session = Depends(get_db), current_user: User = Depends(deps.require_super_admin)):
     row = _get_or_404(db, Lead, lead_id)
     row.status = payload.status
     db.add(row)
+    log_admin_action(db, actor=current_user, action="update_status", entity="lead", entity_id=row.id, metadata={"status": row.status})
     _commit(db)
     db.refresh(row)
     return APIEnvelope(message="Lead status updated.", data={"lead": _serialize(row, ["id", "status"])})

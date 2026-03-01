@@ -4,6 +4,13 @@ import type {
   ApiEnvelope,
   AdminContactMessage,
   AdminContactMessageListResponse,
+  AdminAnalyticsSummary,
+  AdminApproval,
+  AdminAuditLog,
+  AdminPccSummary,
+  AdminPccTransaction,
+  AdminWorkforceUser,
+  AdminZone,
   CaseStudy,
   ContactPayload,
   ContactMessageStatus,
@@ -17,6 +24,7 @@ import type {
   Partner,
   PublicConfig,
   PublicStats,
+  PlatformSettings,
   Testimonial,
   TrainingLesson,
   TrainingLessonType,
@@ -270,5 +278,110 @@ export const convertAdminContactMessageToDemo = async (
     `/admin/contact-messages/${id}/convert-to-demo`,
     payload || {}
   );
+  return res.data;
+};
+
+export const fetchAdminAnalyticsSummary = async () => {
+  const res = await api.get<AdminAnalyticsSummary>("/admin/analytics/summary");
+  return res.data;
+};
+
+export const fetchAdminApprovals = async () => {
+  const res = await api.get<{ items: AdminApproval[] }>("/admin/approvals");
+  return res.data.items || [];
+};
+
+export const actAdminApproval = async (id: number, decision: "approve" | "reject") => {
+  const res = await api.post<{ ok: boolean }>(`/admin/approvals/${id}`, { decision });
+  return res.data;
+};
+
+export const fetchAdminZones = async (params?: { active?: boolean }) => {
+  const res = await api.get<AdminZone[]>("/admin/zones", { params });
+  return res.data;
+};
+
+export const createAdminZone = async (payload: { name: string; type: string; city: string; active: boolean }) => {
+  const res = await api.post<AdminZone>("/admin/zones", payload);
+  return res.data;
+};
+
+export const updateAdminZone = async (
+  zoneId: number,
+  payload: Partial<{ name: string; type: string; city: string; active: boolean }>
+) => {
+  const res = await api.patch<AdminZone>(`/admin/zones/${zoneId}`, payload);
+  return res.data;
+};
+
+export const deleteAdminZone = async (zoneId: number) => {
+  await api.delete(`/admin/zones/${zoneId}`);
+};
+
+export const fetchAdminWorkforce = async (params?: { q?: string }) => {
+  const res = await api.get<AdminWorkforceUser[]>("/admin/workforce", { params });
+  return res.data;
+};
+
+export const createAdminWorkforce = async (payload: {
+  name: string;
+  email: string;
+  password: string;
+  zone_id?: number | null;
+}) => {
+  const res = await api.post<AdminWorkforceUser>("/admin/workforce", payload);
+  return res.data;
+};
+
+export const updateAdminWorkforce = async (
+  userId: number,
+  payload: Partial<{ full_name: string; is_active: boolean }>
+) => {
+  const res = await api.patch<AdminWorkforceUser>(`/admin/workforce/${userId}`, payload);
+  return res.data;
+};
+
+export const assignAdminWorkforceZone = async (userId: number, zone_id?: number | null) => {
+  const res = await api.post<AdminWorkforceUser>(`/admin/workforce/${userId}/assign-zone`, { zone_id: zone_id ?? null });
+  return res.data;
+};
+
+export const fetchAdminPccSummary = async () => {
+  const res = await api.get<AdminPccSummary>("/admin/pcc/summary");
+  return res.data;
+};
+
+export const fetchAdminPccTransactions = async (params?: {
+  date_from?: string;
+  date_to?: string;
+  user_id?: number;
+  tx_type?: string;
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get<{ items: AdminPccTransaction[]; total: number }>("/admin/pcc/transactions", { params });
+  return res.data;
+};
+
+export const fetchAdminAuditLogs = async (params?: {
+  actor?: string;
+  action?: string;
+  entity?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get<{ items: AdminAuditLog[]; total: number }>("/admin/audit-logs", { params });
+  return res.data;
+};
+
+export const fetchPlatformSettings = async () => {
+  const res = await api.get<PlatformSettings>("/admin/settings");
+  return res.data;
+};
+
+export const updatePlatformSettings = async (payload: Partial<PlatformSettings>) => {
+  const res = await api.put<PlatformSettings>("/admin/settings", payload);
   return res.data;
 };

@@ -30,6 +30,7 @@ from app.models.bulk import (
     TransactionStatus,
 )
 from app.models.pcc import EmissionFactor, CarbonLedger
+from app.models.admin_ops import Zone, WorkforceAssignment, AuditLog, PlatformSetting
 
 
 __all__ = [
@@ -62,6 +63,10 @@ __all__ = [
     "TransactionStatus",
     "EmissionFactor",
     "CarbonLedger",
+    "Zone",
+    "WorkforceAssignment",
+    "AuditLog",
+    "PlatformSetting",
     "MarketingPartner",
     "MarketingTestimonial",
     "MarketingCaseStudy",

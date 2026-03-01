@@ -6,11 +6,13 @@ from fastapi import HTTPException, status
 
 from app.models.household import Household, SegregationLog
 from app.models.badge import BadgeCategory
+from app.models.waste_report import WasteReport, WasteReportStatus
 from app.services.badge_service import (
     create_badge_if_missing,
     award_badge_if_not_awarded,
 )
 from app.services.carbon_service import add_carbon_activity
+from app.services.waste_report_service import update_report_status
 
 
 def calculate_segregation_score(
@@ -54,16 +56,30 @@ def log_segregation(
     )
 
     citizen_id: Optional[int] = None
+    linked_report: Optional[WasteReport] = None
     if waste_report_id is not None:
-        from app.models.waste_report import WasteReport
-
-        report = db.query(WasteReport).filter(WasteReport.id == waste_report_id).first()
-        if report is None:
+        linked_report = db.query(WasteReport).filter(WasteReport.id == waste_report_id).first()
+        if linked_report is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Waste report not found",
             )
-        citizen_id = report.reporter_id
+        if worker_id is not None and linked_report.assigned_worker_id != worker_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Claim this report first before logging against it",
+            )
+        if linked_report.household_id is not None and linked_report.household_id != household_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Selected report does not belong to this household/site",
+            )
+        if linked_report.status == WasteReportStatus.RESOLVED.value:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This report is already resolved",
+            )
+        citizen_id = linked_report.reporter_id
 
     log = SegregationLog(
         household_id=household_id,
@@ -96,6 +112,15 @@ def log_segregation(
 
     # ---- Badge integration (simple streak-based) ----
     _handle_segregation_badges(db, household_id=household_id)
+
+    # Auto-close linked report after successful log save.
+    if linked_report is not None:
+        update_report_status(
+            db=db,
+            report_id=linked_report.id,
+            new_status=WasteReportStatus.RESOLVED,
+            assigned_worker_id=worker_id or linked_report.assigned_worker_id,
+        )
 
     return log
 

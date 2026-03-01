@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
-import type { WasteReport, WasteReportStatus } from "../../types/wasteReport";
+import type { WasteReport } from "../../types/wasteReport";
 
 function formatIST(input: string | Date | null | undefined) {
   if (!input) return "";
@@ -22,8 +21,6 @@ export function WorkerMyReportsPage() {
   const [reports, setReports] = useState<WasteReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     async function load() {
@@ -40,34 +37,10 @@ export function WorkerMyReportsPage() {
     void load();
   }, []);
 
-  async function updateStatus(reportId: number, status: WasteReportStatus) {
-    try {
-      setError(null);
-      setUpdatingId(reportId);
-      const res = await api.patch<WasteReport>(`/waste/reports/${reportId}/worker-status`, { status });
-      const updated = res.data;
-      setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail || "Could not update report status.";
-      setError(detail);
-    } finally {
-      setUpdatingId(null);
-    }
-  }
-
-  function handleLogSegregation(report: WasteReport) {
-    if (!report.household_id) {
-      setError("This report is not linked to a household yet.");
-      return;
-    }
-
-    const code = report.public_id ? report.public_id : `CIT-${report.id.toString().padStart(3, "0")}`;
-
-    navigate(
-      `/worker/segregation?householdId=${report.household_id}` +
-        `&reportCode=${encodeURIComponent(code)}` +
-        `&reportId=${report.id}`
-    );
+  function statusBadgeClass(status: WasteReport["status"]) {
+    if (status === "RESOLVED") return "bg-emerald-100 text-emerald-700";
+    if (status === "IN_PROGRESS") return "bg-sky-100 text-sky-700";
+    return "bg-amber-100 text-amber-700";
   }
 
   return (
@@ -93,7 +66,7 @@ export function WorkerMyReportsPage() {
                 <th className="px-3 py-2 text-left">Description</th>
                 <th className="px-3 py-2 text-left">Created</th>
                 <th className="px-3 py-2 text-left">Resolved</th>
-                <th className="px-3 py-2 text-left">Actions</th>
+                <th className="px-3 py-2 text-left">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -107,8 +80,6 @@ export function WorkerMyReportsPage() {
                 </tr>
               ) : (
                 reports.map((r) => {
-                  const canStart = r.status === "OPEN" || r.status === "IN_PROGRESS";
-                  const canResolve = r.status !== "RESOLVED";
                   return (
                     <tr key={r.id} className="border-b border-emerald-100/70">
                       <td className="px-3 py-2 text-slate-900">
@@ -119,29 +90,9 @@ export function WorkerMyReportsPage() {
                       <td className="px-3 py-2 text-slate-700">{formatIST(r.created_at) || "-"}</td>
                       <td className="px-3 py-2 text-slate-700">{formatIST(r.resolved_at) || "-"}</td>
                       <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-2">
-                          {!!r.household_id && (
-                            <button className="btn-secondary px-3 py-1 text-xs" onClick={() => handleLogSegregation(r)}>
-                              Log Segregation
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => updateStatus(r.id, "IN_PROGRESS")}
-                            disabled={!canStart || updatingId === r.id}
-                            className="btn-secondary px-3 py-1 text-xs"
-                          >
-                            {updatingId === r.id && canStart ? "Updating..." : "Mark In Progress"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateStatus(r.id, "RESOLVED")}
-                            disabled={!canResolve || updatingId === r.id}
-                            className="btn-primary px-3 py-1 text-xs"
-                          >
-                            {updatingId === r.id && canResolve ? "Updating..." : "Mark Resolved"}
-                          </button>
-                        </div>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass(r.status)}`}>
+                          {r.status.replaceAll("_", " ")}
+                        </span>
                       </td>
                     </tr>
                   );

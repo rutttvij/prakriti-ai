@@ -199,6 +199,10 @@ export default function WorkerSegregationPage() {
       const res = await api.post<SegregationLog>("/segregation/logs", payload);
 
       setLogs((prev) => [res.data, ...prev]);
+      if (selectedReport) {
+        setMyReports((prev) => prev.filter((r) => r.id !== selectedReport.id));
+        setSelectedReportId("");
+      }
       setDryKg("");
       setWetKg("");
       setRejectKg("");

@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.api import deps
 from app.models.training import TrainingModule, TrainingProgress
-from app.models.badge import Badge, UserBadge
 from app.models.notification import Notification
 from app.models.user import UserRole
 from app.schemas.training import (
@@ -15,54 +14,16 @@ from app.schemas.training import (
     TrainingCompleteRequest,
     TrainingProgressRead,
 )
-from app.models.badge import BadgeCategory
-from app.services.badge_service import (
-    create_badge_if_missing,
-    award_badge_if_not_awarded,
-)
 from app.services.carbon_service import add_carbon_activity
-from app.services.training_service import get_published_module, list_published_modules
+from app.services.badge_service import award_badge_if_not_awarded, create_badge_if_missing
+from app.models.badge import BadgeCategory
+from app.services.training_service import (
+    evaluate_training_milestone_badges,
+    get_published_module,
+    list_published_modules,
+)
 
 router = APIRouter(prefix="/training", tags=["training"])
-
-
-def _get_or_create_badge(
-    db: Session,
-    *,
-    code: str,
-    name: str,
-    description: str,
-    criteria_key: str,
-) -> Badge:
-    badge = db.query(Badge).filter(Badge.code == code).first()
-    if badge is None:
-        badge = db.query(Badge).filter(Badge.criteria_key == criteria_key).first()
-    if badge is None:
-        badge = Badge(
-            code=code,
-            name=name,
-            description=description,
-            category="TRAINING",
-            criteria_key=criteria_key,
-            is_active=True,
-            active=True,
-            created_at=datetime.now(UTC).replace(tzinfo=None),
-        )
-        db.add(badge)
-        db.flush()
-    return badge
-
-
-def _award_badge_once(db: Session, *, user_id: int, badge: Badge) -> bool:
-    exists = (
-        db.query(UserBadge)
-        .filter(UserBadge.user_id == user_id, UserBadge.badge_id == badge.id)
-        .first()
-    )
-    if exists:
-        return False
-    db.add(UserBadge(user_id=user_id, badge_id=badge.id, awarded_at=datetime.now(UTC).replace(tzinfo=None)))
-    return True
 
 
 @router.get("/modules", response_model=List[TrainingModuleRead])
@@ -134,11 +95,19 @@ def complete_training_module(
         progress.completed_at = now
 
     db.flush()
-    _handle_training_completion_effects(db, current_user.id, module.id, score)
+    unlocked_badges = _handle_training_completion_effects(db, current_user.id, module.id, score)
     db.commit()
     db.refresh(progress)
 
-    return progress
+    return TrainingProgressRead(
+        id=progress.id,
+        module_id=progress.module_id,
+        user_id=progress.user_id,
+        completed=progress.completed,
+        score=progress.score,
+        completed_at=progress.completed_at,
+        newly_unlocked_badges=unlocked_badges,
+    )
 
 
 @router.get("/progress/me", response_model=List[TrainingProgressRead])
@@ -159,7 +128,7 @@ def _handle_training_completion_effects(
     user_id: int,
     module_id: int,
     score: float,
-) -> None:
+) -> list[dict]:
     criteria_key = f"training_module_{module_id}_completed"
     create_badge_if_missing(
         db=db,
@@ -185,21 +154,6 @@ def _handle_training_completion_effects(
         description=f"Completed training module {module_id} with score {score}",
     )
 
-    first_badge = _get_or_create_badge(
-        db,
-        code="GREEN_STARTER",
-        name="Green Starter",
-        description="Completed your first citizen training module.",
-        criteria_key="citizen_training_first_module",
-    )
-    all_badge = _get_or_create_badge(
-        db,
-        code="CERTIFIED_CITIZEN",
-        name="Certified Citizen",
-        description="Completed all published citizen training modules.",
-        criteria_key="citizen_training_all_modules",
-    )
-
     completed_count = (
         db.query(TrainingProgress)
         .join(TrainingModule, TrainingModule.id == TrainingProgress.module_id)
@@ -216,23 +170,33 @@ def _handle_training_completion_effects(
         .filter(TrainingModule.audience == "citizen", TrainingModule.is_published.is_(True))
         .count()
     )
+    unlocked = evaluate_training_milestone_badges(
+        db,
+        user_id=user_id,
+        audience="citizen",
+        completed_count=completed_count,
+        total_count=total_count,
+    )
 
-    if completed_count >= 1 and _award_badge_once(db, user_id=user_id, badge=first_badge):
+    payload = []
+    for badge in unlocked:
+        code = badge.code or badge.criteria_key or f"badge_{badge.id}"
         db.add(
             Notification(
                 user_id=user_id,
                 title="Badge Unlocked",
-                body="You earned GREEN_STARTER for completing your first module.",
+                body=f"You earned {code.upper()} from training milestones.",
                 is_read=False,
             )
         )
-
-    if total_count > 0 and completed_count >= total_count and _award_badge_once(db, user_id=user_id, badge=all_badge):
-        db.add(
-            Notification(
-                user_id=user_id,
-                title="Badge Unlocked",
-                body="You earned CERTIFIED_CITIZEN for completing all citizen modules.",
-                is_read=False,
-            )
+        payload.append(
+            {
+                "code": code,
+                "name": badge.name,
+                "description": badge.description,
+                "category": badge.category,
+                "awarded_at": datetime.now(UTC).replace(tzinfo=None),
+                "metadata": {"source": "training_milestone", "audience": "citizen"},
+            }
         )
+    return payload

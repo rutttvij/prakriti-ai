@@ -11,13 +11,45 @@ type BulkSummary = {
   pickup_total: number;
   segregation_score: number;
   carbon_saved_total: number;
-  recent_badges: string[];
+  recent_badges: Array<
+    | string
+    | {
+        code: string;
+        name: string;
+        description?: string | null;
+        category: string;
+        awarded_at?: string;
+        metadata?: Record<string, unknown>;
+      }
+  >;
 };
+
+function normalizeBadges(raw: BulkSummary["recent_badges"] | undefined) {
+  return (raw ?? []).map((item) => {
+    if (typeof item === "string") {
+      return {
+        code: item.toLowerCase(),
+        name: item.replaceAll("_", " "),
+        description: null,
+        category: "LEGACY",
+        awarded_at: "",
+      };
+    }
+    return {
+      code: item.code,
+      name: item.name || item.code.replaceAll("_", " "),
+      description: item.description ?? null,
+      category: item.category,
+      awarded_at: item.awarded_at ?? "",
+    };
+  });
+}
 
 export default function BulkDashboardPage() {
   const [summary, setSummary] = useState<BulkSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const normalizedBadges = normalizeBadges(summary?.recent_badges);
 
   useEffect(() => {
     let active = true;
@@ -99,14 +131,16 @@ export default function BulkDashboardPage() {
         <h3 className="text-lg font-bold text-slate-900">Recent Badges</h3>
         {loading ? (
           <p className="mt-3 text-sm text-slate-500">Loading badges...</p>
-        ) : (summary?.recent_badges?.length ?? 0) === 0 ? (
+        ) : normalizedBadges.length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">No badges earned yet.</p>
         ) : (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {summary?.recent_badges.map((badge, idx) => (
-              <span key={`${badge}-${idx}`} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                {badge.replaceAll("_", " ")}
-              </span>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {normalizedBadges.map((badge) => (
+              <div key={`${badge.code}-${badge.awarded_at || ""}`} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
+                <p className="text-sm font-semibold text-slate-900">{badge.name}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{badge.category.replaceAll("_", " ")}</p>
+                {badge.awarded_at ? <p className="mt-1 text-xs text-slate-500">Unlocked: {new Date(badge.awarded_at).toLocaleString()}</p> : null}
+              </div>
             ))}
           </div>
         )}

@@ -6,13 +6,50 @@ type InsightsSummary = {
   pcc_earned_total: number;
   current_streak_days: number;
   quality_30d: number;
-  earned_badges: string[];
+  earned_badges: Array<
+    | string
+    | {
+        code: string;
+        name: string;
+        description?: string | null;
+        category: string;
+        awarded_at?: string;
+        metadata?: Record<string, unknown>;
+      }
+  >;
+  badge_tiers?: Array<{
+    tier_key: string;
+    unlocked_count: number;
+    total_count: number;
+  }>;
 };
+
+function normalizeBadges(raw: InsightsSummary["earned_badges"] | undefined) {
+  return (raw ?? []).map((item) => {
+    if (typeof item === "string") {
+      return {
+        code: item.toLowerCase(),
+        name: item.replaceAll("_", " "),
+        description: null,
+        category: "LEGACY",
+        awarded_at: "",
+      };
+    }
+    return {
+      code: item.code,
+      name: item.name || item.code.replaceAll("_", " "),
+      description: item.description ?? null,
+      category: item.category,
+      awarded_at: item.awarded_at ?? "",
+    };
+  });
+}
 
 export default function BulkInsightsPage() {
   const [summary, setSummary] = useState<InsightsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const badges = normalizeBadges(summary?.earned_badges);
 
   useEffect(() => {
     let active = true;
@@ -67,17 +104,37 @@ export default function BulkInsightsPage() {
       </div>
 
       <div className="surface-card-strong p-5">
+        <h2 className="text-xl font-bold text-slate-900">Badge Tiers</h2>
+        {(summary?.badge_tiers?.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">No tier progress available yet.</p>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {summary?.badge_tiers?.map((tier) => (
+              <div key={tier.tier_key} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
+                <p className="text-sm font-semibold text-slate-900">{tier.tier_key.replaceAll("_", " ")}</p>
+                <p className="mt-2 text-2xl font-bold text-emerald-700">
+                  {tier.unlocked_count} / {tier.total_count}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="surface-card-strong p-5">
         <h2 className="text-xl font-bold text-slate-900">Earned Badges</h2>
         {loading ? (
           <p className="mt-3 text-sm text-slate-500">Loading badge timeline...</p>
-        ) : (summary?.earned_badges?.length ?? 0) === 0 ? (
+        ) : badges.length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">No badges earned yet.</p>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {summary?.earned_badges.map((badge, idx) => (
-              <div key={`${badge}-${idx}`} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
-                <p className="text-sm font-semibold text-slate-900">{badge.replaceAll("_", " ")}</p>
-                <p className="mt-1 text-xs text-slate-500">Milestone unlocked via verified bulk operations.</p>
+            {badges.map((badge) => (
+              <div key={`${badge.code}-${badge.awarded_at || ""}`} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
+                <p className="text-sm font-semibold text-slate-900">{badge.name}</p>
+                <p className="mt-1 text-xs text-slate-500">{badge.description || "Milestone unlocked via verified bulk operations."}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{badge.category.replaceAll("_", " ")}</p>
+                {badge.awarded_at ? <p className="mt-1 text-xs text-slate-500">Unlocked: {new Date(badge.awarded_at).toLocaleString()}</p> : null}
               </div>
             ))}
           </div>

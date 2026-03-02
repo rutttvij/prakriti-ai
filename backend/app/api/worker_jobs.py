@@ -9,6 +9,7 @@ from app.models.user import User, UserRole
 from app.schemas.bulk import ApiEnvelope, VerificationCreate, WorkerPickupStatusUpdate
 from app.services.bulk_service import (
     claim_worker_job,
+    get_worker_badge_summary,
     list_assigned_worker_jobs,
     list_available_worker_jobs,
     update_worker_job_status,
@@ -34,7 +35,8 @@ def worker_jobs_assigned(
     current_user: User = Depends(deps.require_roles(UserRole.WASTE_WORKER, UserRole.SUPER_ADMIN)),
 ):
     jobs = list_assigned_worker_jobs(db, current_user=current_user)
-    return ApiEnvelope(message="Assigned jobs fetched.", data={"items": [j.model_dump() for j in jobs]})
+    badge_summary = get_worker_badge_summary(db, current_user=current_user)
+    return ApiEnvelope(message="Assigned jobs fetched.", data={"items": [j.model_dump() for j in jobs], "badge_summary": badge_summary})
 
 
 @router.post("/jobs/{pickup_request_id}/claim", response_model=ApiEnvelope)
@@ -101,7 +103,7 @@ def worker_submit_verification(
         reject_weight_kg=reject_weight_kg,
         notes=notes,
     )
-    verification, wallet = verify_bulk_waste(
+    verification, wallet, unlocked_badges = verify_bulk_waste(
         db,
         current_user=current_user,
         payload=payload,
@@ -125,5 +127,15 @@ def worker_submit_verification(
                 "balance_pcc": wallet.balance_pcc,
                 "balance_points": wallet.balance_points,
             },
+            "unlocked_badges": unlocked_badges,
         },
     )
+
+
+@router.get("/badges/me", response_model=ApiEnvelope)
+def worker_badges_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_roles(UserRole.WASTE_WORKER, UserRole.SUPER_ADMIN)),
+):
+    summary = get_worker_badge_summary(db, current_user=current_user)
+    return ApiEnvelope(message="Worker badges fetched.", data=summary)

@@ -164,6 +164,21 @@ class VerificationRead(BaseModel):
     created_at: datetime
 
 
+class BadgeItem(BaseModel):
+    code: str
+    name: str
+    description: Optional[str] = None
+    category: str
+    awarded_at: datetime
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class BadgeTierSummary(BaseModel):
+    tier_key: str
+    unlocked_count: int
+    total_count: int
+
+
 class BulkDashboardSummary(BaseModel):
     total_waste_logs: int
     total_logged_weight_kg: float
@@ -173,7 +188,7 @@ class BulkDashboardSummary(BaseModel):
     pickup_total: int
     segregation_score: float
     carbon_saved_total: float
-    recent_badges: List[str]
+    recent_badges: List[BadgeItem]
 
 
 class BulkInsightsSummary(BaseModel):
@@ -181,7 +196,13 @@ class BulkInsightsSummary(BaseModel):
     pcc_earned_total: float
     current_streak_days: int
     quality_30d: float
-    earned_badges: List[str]
+    earned_badges: List[BadgeItem]
+    badge_tiers: List[BadgeTierSummary] = Field(default_factory=list)
+
+
+class WorkerBadgeSummary(BaseModel):
+    earned_count: int
+    latest_unlocked: List[BadgeItem] = Field(default_factory=list)
 
 
 class WorkerJobRead(BaseModel):

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, UTC
+
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.badge import Badge, UserBadge
 from app.models.training import TrainingLesson, TrainingModule
 from app.schemas.training_cms import (
     LessonReorderRequest,
@@ -13,6 +16,19 @@ from app.schemas.training_cms import (
     TrainingModuleListResponse,
     TrainingModuleUpdate,
 )
+
+TRAINING_MILESTONE_BADGES: dict[str, list[tuple[int, str, str, str]]] = {
+    "citizen": [
+        (3, "citizen_training_3", "Citizen Training Bronze", "Completed 3 citizen training modules."),
+        (5, "citizen_training_5", "Citizen Training Silver", "Completed 5 citizen training modules."),
+        (10, "citizen_training_10", "Citizen Training Gold", "Completed 10 citizen training modules."),
+    ],
+    "bulk_generator": [
+        (1, "bulk_training_1", "Bulk Training Starter", "Completed 1 bulk training module."),
+        (3, "bulk_training_3", "Bulk Training Operator", "Completed 3 bulk training modules."),
+        (5, "bulk_training_5", "Bulk Training Specialist", "Completed 5 bulk training modules."),
+    ],
+}
 
 
 def create_module(db: Session, payload: TrainingModuleCreate) -> TrainingModule:
@@ -191,3 +207,112 @@ def get_published_module(db: Session, module_id: int) -> TrainingModule | None:
         .filter(TrainingModule.id == module_id, TrainingModule.is_published == True)  # noqa: E712
         .first()
     )
+
+
+def _get_or_create_training_badge(
+    db: Session,
+    *,
+    code: str,
+    name: str,
+    description: str,
+    audience: str,
+    threshold: int,
+    criteria_key: str | None = None,
+) -> Badge:
+    badge = db.query(Badge).filter(Badge.code == code).first()
+    key = criteria_key or code
+    if badge is None:
+        badge = db.query(Badge).filter(Badge.criteria_key == key).first()
+    if badge is None:
+        badge = Badge(
+            code=code,
+            name=name,
+            description=description,
+            category="TRAINING",
+            criteria_key=key,
+            threshold=float(threshold),
+            rule_json={"kind": "training_milestone", "audience": audience, "threshold": threshold},
+            active=True,
+            is_active=True,
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        db.add(badge)
+        db.flush()
+    return badge
+
+
+def _award_training_badge_once(db: Session, *, user_id: int, badge: Badge, metadata: dict) -> bool:
+    exists = (
+        db.query(UserBadge)
+        .filter(UserBadge.user_id == user_id, UserBadge.badge_id == badge.id)
+        .first()
+    )
+    if exists:
+        return False
+    db.add(
+        UserBadge(
+            user_id=user_id,
+            badge_id=badge.id,
+            metadata_json=metadata,
+            awarded_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+    )
+    return True
+
+
+def evaluate_training_milestone_badges(
+    db: Session,
+    *,
+    user_id: int,
+    audience: str,
+    completed_count: int,
+    total_count: int,
+) -> list[Badge]:
+    newly_awarded: list[Badge] = []
+    metadata = {
+        "source": "training_milestone",
+        "audience": audience,
+        "completed_count": completed_count,
+        "total_count": total_count,
+    }
+
+    if audience == "citizen":
+        first_badge = _get_or_create_training_badge(
+            db,
+            code="GREEN_STARTER",
+            name="Green Starter",
+            description="Completed your first citizen training module.",
+            audience="citizen",
+            threshold=1,
+            criteria_key="citizen_training_first_module",
+        )
+        all_badge = _get_or_create_training_badge(
+            db,
+            code="CERTIFIED_CITIZEN",
+            name="Certified Citizen",
+            description="Completed all published citizen training modules.",
+            audience="citizen",
+            threshold=max(total_count, 1),
+            criteria_key="citizen_training_all_modules",
+        )
+        if completed_count >= 1 and _award_training_badge_once(db, user_id=user_id, badge=first_badge, metadata=metadata):
+            newly_awarded.append(first_badge)
+        if total_count > 0 and completed_count >= total_count and _award_training_badge_once(db, user_id=user_id, badge=all_badge, metadata=metadata):
+            newly_awarded.append(all_badge)
+
+    for threshold, code, name, description in TRAINING_MILESTONE_BADGES.get(audience, []):
+        badge = _get_or_create_training_badge(
+            db,
+            code=code,
+            name=name,
+            description=description,
+            audience=audience,
+            threshold=threshold,
+            criteria_key=code,
+        )
+        if completed_count >= threshold and _award_training_badge_once(db, user_id=user_id, badge=badge, metadata=metadata):
+            newly_awarded.append(badge)
+
+    if newly_awarded:
+        db.flush()
+    return newly_awarded

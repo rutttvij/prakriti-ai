@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TrainingLessonPublicRead(BaseModel):
@@ -40,6 +40,15 @@ class TrainingCompleteRequest(BaseModel):
     score: Optional[float] = None
 
 
+class TrainingBadgeItemRead(BaseModel):
+    code: str
+    name: str
+    description: Optional[str] = None
+    category: str
+    awarded_at: Optional[datetime] = None
+    metadata: dict = Field(default_factory=dict)
+
+
 class TrainingProgressRead(BaseModel):
     id: int
     module_id: int
@@ -47,6 +56,7 @@ class TrainingProgressRead(BaseModel):
     completed: bool
     score: Optional[float] = None
     completed_at: Optional[datetime] = None
+    newly_unlocked_badges: List[TrainingBadgeItemRead] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

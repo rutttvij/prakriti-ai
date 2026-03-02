@@ -12,8 +12,8 @@ import {
   YAxis,
 } from "recharts";
 import CitizenPageHero from "../../components/citizen/CitizenPageHero";
-import { fetchCitizenHouseholds, fetchCitizenSegregationSummary } from "../../lib/api";
-import type { CitizenHousehold, CitizenSegregationSummary } from "../../lib/types";
+import { fetchCitizenBadgesSummary, fetchCitizenHouseholds, fetchCitizenSegregationSummary } from "../../lib/api";
+import type { CitizenBadgeSummary, CitizenHousehold, CitizenSegregationSummary } from "../../lib/types";
 
 const EMPTY_SUMMARY: CitizenSegregationSummary = {
   avg_score: 0,
@@ -35,6 +35,12 @@ export default function CitizenInsightsPage() {
   const [households, setHouseholds] = useState<CitizenHousehold[]>([]);
   const [householdId, setHouseholdId] = useState<number | null>(null);
   const [summary, setSummary] = useState<CitizenSegregationSummary>(EMPTY_SUMMARY);
+  const [badgeSummary, setBadgeSummary] = useState<CitizenBadgeSummary>({
+    earned_count: 0,
+    latest_unlocked: [],
+    timeline: [],
+    tiers: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,8 +49,9 @@ export default function CitizenInsightsPage() {
       setLoading(true);
       setError(null);
       try {
-        const hh = await fetchCitizenHouseholds();
+        const [hh, badges] = await Promise.all([fetchCitizenHouseholds(), fetchCitizenBadgesSummary()]);
         setHouseholds(hh);
+        setBadgeSummary(badges);
         const primary = hh.find((x) => x.is_primary) ?? hh[0] ?? null;
         setHouseholdId(primary?.id ?? null);
       } catch (e: any) {
@@ -149,6 +156,24 @@ export default function CitizenInsightsPage() {
         </div>
       </div>
 
+      <div className="surface-card-strong rounded-3xl p-5">
+        <h3 className="text-xl font-semibold text-slate-900">Badge Tiers</h3>
+        {(badgeSummary.tiers?.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">No badge tier progress yet.</p>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            {badgeSummary.tiers.map((tier) => (
+              <div key={tier.tier_key} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
+                <p className="text-xs uppercase tracking-wide text-slate-500">{tier.tier_key.replaceAll("_", " ")}</p>
+                <p className="mt-2 text-2xl font-bold text-emerald-700">
+                  {tier.unlocked_count} / {tier.total_count}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="surface-card-strong rounded-3xl p-4">
           <h3 className="text-lg font-semibold text-slate-900">Score (Last 7 Days)</h3>
@@ -226,6 +251,24 @@ export default function CitizenInsightsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="surface-card-strong rounded-3xl p-5">
+        <h3 className="text-xl font-semibold text-slate-900">Badge Timeline</h3>
+        {(badgeSummary.timeline?.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">No badges unlocked yet.</p>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {badgeSummary.timeline.map((badge) => (
+              <div key={`${badge.code}-${badge.awarded_at}`} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
+                <p className="text-sm font-semibold text-slate-900">{badge.name}</p>
+                <p className="mt-1 text-xs text-slate-500">{badge.description || "Citizen milestone unlocked."}</p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{badge.category.replaceAll("_", " ")}</p>
+                <p className="mt-1 text-xs text-slate-500">Unlocked: {new Date(badge.awarded_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -468,6 +468,28 @@ export type CitizenBadge = {
   awarded_at: string;
 };
 
+export type CitizenBadgeItem = {
+  code: string;
+  name: string;
+  description?: string | null;
+  category: string;
+  awarded_at: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type CitizenBadgeTier = {
+  tier_key: string;
+  unlocked_count: number;
+  total_count: number;
+};
+
+export type CitizenBadgeSummary = {
+  earned_count: number;
+  latest_unlocked: CitizenBadgeItem[];
+  timeline: CitizenBadgeItem[];
+  tiers: CitizenBadgeTier[];
+};
+
 export type CitizenTrainingSummary = {
   total_modules_published: number;
   completed_count: number;

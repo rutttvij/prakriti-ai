@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session
@@ -30,6 +30,18 @@ CONSISTENCY_BADGES = [
 QUALITY_BADGES = [
     ("quality_95", "Segregation Expert", "QUALITY", 0.95),
     ("quality_85", "Clean Contributor", "QUALITY", 0.85),
+]
+
+BULK_WORKFLOW_BADGES = [
+    ("bulk_first_verified", "Bulk First Verified", "BULK_WORKFLOW", 1.0),
+    ("bulk_segregation_star", "Bulk Segregation Star", "BULK_WORKFLOW", 95.0),
+    ("bulk_century_pcc", "Bulk Century PCC", "BULK_WORKFLOW", 100.0),
+]
+
+WORKER_PERFORMANCE_BADGES = [
+    ("worker_bulk_verifier_1", "Bulk Verifier I", "WORKER_PERFORMANCE", 1.0),
+    ("worker_bulk_verifier_25", "Bulk Verifier XXV", "WORKER_PERFORMANCE", 25.0),
+    ("worker_bulk_quality_guardian", "Bulk Quality Guardian", "WORKER_PERFORMANCE", 95.0),
 ]
 
 
@@ -60,7 +72,8 @@ def _waste_log_user_col(db: Session):
 
 def _seed_badges_if_missing(db: Session) -> None:
     defaults = []
-    for code, name, cat, threshold in IMPACT_BADGES + CONSISTENCY_BADGES + QUALITY_BADGES:
+    all_badges = IMPACT_BADGES + CONSISTENCY_BADGES + QUALITY_BADGES + BULK_WORKFLOW_BADGES + WORKER_PERFORMANCE_BADGES
+    for code, name, cat, threshold in all_badges:
         defaults.append(
             {
                 "code": code,
@@ -214,3 +227,139 @@ def evaluate_and_award_badges(db: Session, user_id: Optional[int], org_id: Optio
     if newly_awarded:
         db.flush()
     return newly_awarded
+
+
+def evaluate_bulk_worker_event_badges(
+    db: Session,
+    *,
+    bulk_user_id: int,
+    worker_user_id: Optional[int],
+    org_id: Optional[int],
+    event_type: str,
+    event_payload: dict[str, Any],
+) -> dict[str, list[Badge]]:
+    """
+    Event-based badge evaluation for Bulk + Worker workflow.
+    Returns newly awarded badges split by target user.
+    """
+    _seed_badges_if_missing(db)
+    by_code = {b.code: b for b in db.query(Badge).filter(Badge.active.is_(True)).all() if b.code}
+
+    bulk_new: list[Badge] = []
+    worker_new: list[Badge] = []
+    if event_type != "bulk_verification":
+        return {"bulk": bulk_new, "worker": worker_new}
+
+    score = float(event_payload.get("score") or 0.0)
+    pcc_snapshot = float(event_payload.get("pcc_snapshot") or 0.0)
+    waste_log_id = event_payload.get("waste_log_id")
+    pickup_request_id = event_payload.get("pickup_request_id")
+
+    def maybe_award(
+        *,
+        code: str,
+        user_id: int,
+        collect: list[Badge],
+        condition: bool,
+        metadata: dict[str, Any],
+    ) -> None:
+        badge = by_code.get(code)
+        if not badge or not condition:
+            return
+        if _already_awarded(db, badge.id, user_id, org_id):
+            return
+        _award(db, badge, user_id, org_id, metadata)
+        collect.append(badge)
+
+    bulk_verified_count = (
+        db.query(Verification)
+        .join(WasteLog, WasteLog.id == Verification.waste_log_id)
+        .filter(WasteLog.bulk_generator_id == org_id)
+        .count()
+        if org_id is not None
+        else 0
+    )
+    common_meta = {
+        "source": "bulk_workflow",
+        "trigger": "verification",
+        "waste_log_id": waste_log_id,
+        "pickup_request_id": pickup_request_id,
+        "score": score,
+        "pcc_snapshot": pcc_snapshot,
+    }
+    maybe_award(
+        code="bulk_first_verified",
+        user_id=bulk_user_id,
+        collect=bulk_new,
+        condition=bulk_verified_count >= 1,
+        metadata={**common_meta, "target": "bulk"},
+    )
+    maybe_award(
+        code="bulk_segregation_star",
+        user_id=bulk_user_id,
+        collect=bulk_new,
+        condition=score >= 95.0,
+        metadata={**common_meta, "target": "bulk"},
+    )
+    maybe_award(
+        code="bulk_century_pcc",
+        user_id=bulk_user_id,
+        collect=bulk_new,
+        condition=pcc_snapshot >= 100.0,
+        metadata={**common_meta, "target": "bulk"},
+    )
+
+    if worker_user_id is not None:
+        worker_verified_count = db.query(Verification).filter(Verification.verifier_worker_id == worker_user_id).count()
+        worker_quality_count = (
+            db.query(Verification)
+            .filter(Verification.verifier_worker_id == worker_user_id, Verification.score >= 95.0)
+            .count()
+        )
+        maybe_award(
+            code="worker_bulk_verifier_1",
+            user_id=worker_user_id,
+            collect=worker_new,
+            condition=worker_verified_count >= 1,
+            metadata={**common_meta, "target": "worker"},
+        )
+        maybe_award(
+            code="worker_bulk_verifier_25",
+            user_id=worker_user_id,
+            collect=worker_new,
+            condition=worker_verified_count >= 25,
+            metadata={**common_meta, "target": "worker"},
+        )
+        maybe_award(
+            code="worker_bulk_quality_guardian",
+            user_id=worker_user_id,
+            collect=worker_new,
+            condition=worker_quality_count >= 10 and score >= 95.0,
+            metadata={**common_meta, "target": "worker"},
+        )
+
+    if bulk_new or worker_new:
+        db.flush()
+    return {"bulk": bulk_new, "worker": worker_new}
+
+
+def list_user_badge_items(db: Session, *, user_id: int, org_id: Optional[int] = None, limit: Optional[int] = None) -> list[dict[str, Any]]:
+    query = db.query(UserBadge, Badge).join(Badge, Badge.id == UserBadge.badge_id).filter(UserBadge.user_id == user_id)
+    if org_id is not None and _has_column(db, "user_badges", "org_id"):
+        query = query.filter(UserBadge.org_id == org_id)
+    query = query.order_by(UserBadge.awarded_at.desc())
+    if limit is not None:
+        query = query.limit(max(1, limit))
+
+    rows = query.all()
+    return [
+        {
+            "code": badge.code or (badge.criteria_key or f"badge_{badge.id}"),
+            "name": badge.name,
+            "description": badge.description,
+            "category": badge.category,
+            "awarded_at": user_badge.awarded_at,
+            "metadata": user_badge.metadata_json or {},
+        }
+        for user_badge, badge in rows
+    ]

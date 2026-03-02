@@ -40,9 +40,28 @@ from app.schemas.citizen import (
     WeeklyBreakdownPoint,
     WeeklyScorePoint,
 )
+from app.services.badge_engine import list_user_badge_items
 from app.services.waste_report_service import create_waste_report
 
 router = APIRouter(prefix="/citizen", tags=["citizen"])
+
+
+def _citizen_badge_tiers(earned_badges: list[dict[str, Any]]) -> list[dict[str, int | str]]:
+    codes = {str(item.get("code", "")).lower() for item in earned_badges}
+    tiers = [
+        ("citizen_training", ["green_starter", "certified_citizen"]),
+        ("citizen_impact", ["impact_10", "impact_50", "impact_200", "impact_500", "impact_1000"]),
+        ("citizen_consistency", ["streak_7", "streak_30", "streak_180"]),
+        ("citizen_quality", ["quality_85", "quality_95"]),
+    ]
+    return [
+        {
+            "tier_key": tier_key,
+            "unlocked_count": sum(1 for code in keys if code in codes),
+            "total_count": len(keys),
+        }
+        for tier_key, keys in tiers
+    ]
 
 
 def _setting_number(db: Session, key: str, default: float) -> float:
@@ -807,6 +826,20 @@ def training_summary(
         next_module=next_module,
         badges=badges,
     )
+
+
+@router.get("/badges/me")
+def citizen_badges_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_citizen),
+):
+    earned_badges = list_user_badge_items(db, user_id=current_user.id)
+    return {
+        "earned_count": len(earned_badges),
+        "latest_unlocked": earned_badges[:5],
+        "timeline": earned_badges,
+        "tiers": _citizen_badge_tiers(earned_badges),
+    }
 
 
 @router.get("/notifications", response_model=list[NotificationOut])

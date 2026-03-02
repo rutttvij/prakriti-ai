@@ -298,6 +298,8 @@ class WalletLedger(Base):
 
 
 class BadgeAward(Base):
+    # TODO(phase-2): Remove this legacy table after badge migration stabilizes.
+    # Runtime awarding now uses badges + user_badges.
     __tablename__ = "badge_awards"
 
     id = Column(Integer, primary_key=True, index=True)

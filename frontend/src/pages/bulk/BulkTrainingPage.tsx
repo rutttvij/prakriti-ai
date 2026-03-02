@@ -113,12 +113,17 @@ export default function BulkTrainingPage() {
   const completeModule = async (moduleId: number) => {
     setBusyModuleId(moduleId);
     try {
-      await api.post("/bulk/training/complete-lesson", (() => {
+      const res = await api.post("/bulk/training/complete-lesson", (() => {
         const f = new FormData();
         f.append("module_id", String(moduleId));
         return f;
       })());
-      setOk("Module marked complete.");
+      const unlocked = res.data?.data?.newly_unlocked_badges ?? [];
+      setOk(
+        unlocked.length > 0
+          ? `Module marked complete. Badge unlocked: ${unlocked.map((b: any) => b.name).join(", ")}`
+          : "Module marked complete."
+      );
       await load();
     } catch (e: any) {
       setError(e?.response?.data?.detail || "Failed to mark module complete.");

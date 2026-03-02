@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.core.database import get_db
 from app.models.bulk import PickupRequestStatus, WasteLogCategory, WasteLogStatus
+from app.models.notification import Notification
 from app.models.training import TrainingProgress
 from app.models.user import User, UserRole
 from app.schemas.bulk import (
@@ -23,6 +24,7 @@ from app.services.bulk_service import (
     create_pickup_request,
     create_waste_log,
     get_bulk_dashboard_summary,
+    get_bulk_badges_timeline,
     get_bulk_insights_summary,
     get_bulk_me,
     get_bulk_training_modules,
@@ -32,6 +34,7 @@ from app.services.bulk_service import (
     update_pickup_status,
     verify_waste_log,
 )
+from app.services.training_service import evaluate_training_milestone_badges
 
 
 router = APIRouter(prefix="/bulk", tags=["bulk"])
@@ -250,6 +253,15 @@ def bulk_insights_summary(
     return ApiEnvelope(message="Insights summary fetched.", data={"summary": summary.model_dump()})
 
 
+@router.get("/badges/me", response_model=ApiEnvelope)
+def bulk_badges_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_roles(UserRole.BULK_GENERATOR, UserRole.BULK_MANAGER, UserRole.BULK_STAFF)),
+):
+    timeline = get_bulk_badges_timeline(db, current_user=current_user)
+    return ApiEnvelope(message="Bulk badges fetched.", data=timeline)
+
+
 @router.get("/training/modules", response_model=ApiEnvelope)
 def bulk_training_modules(
     db: Session = Depends(get_db),
@@ -290,6 +302,16 @@ def bulk_training_complete_lesson(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.require_roles(UserRole.BULK_GENERATOR, UserRole.BULK_MANAGER, UserRole.BULK_STAFF)),
 ):
+    from app.models.training import TrainingModule
+
+    module_row = (
+        db.query(TrainingModule)
+        .filter(TrainingModule.id == module_id, TrainingModule.audience == "bulk_generator")
+        .first()
+    )
+    if module_row is None:
+        raise HTTPException(status_code=404, detail="Training module not found.")
+
     progress = (
         db.query(TrainingProgress)
         .filter(TrainingProgress.user_id == current_user.id, TrainingProgress.module_id == module_id)
@@ -308,9 +330,61 @@ def bulk_training_complete_lesson(
         progress.score = 100.0
         progress.completed_at = datetime.utcnow()
     db.add(progress)
+
+    completed_count = (
+        db.query(TrainingProgress)
+        .join(TrainingModule, TrainingModule.id == TrainingProgress.module_id)
+        .filter(
+            TrainingProgress.user_id == current_user.id,
+            TrainingProgress.completed.is_(True),
+            TrainingModule.audience == "bulk_generator",
+            TrainingModule.is_published.is_(True),
+        )
+        .count()
+    )
+    total_count = (
+        db.query(TrainingModule)
+        .filter(TrainingModule.audience == "bulk_generator", TrainingModule.is_published.is_(True))
+        .count()
+    )
+    unlocked = evaluate_training_milestone_badges(
+        db,
+        user_id=current_user.id,
+        audience="bulk_generator",
+        completed_count=completed_count,
+        total_count=total_count,
+    )
+    unlocked_badges = []
+    for badge in unlocked:
+        code = badge.code or badge.criteria_key or f"badge_{badge.id}"
+        db.add(
+            Notification(
+                user_id=current_user.id,
+                title="Badge Unlocked",
+                body=f"You earned {code.upper()} from bulk training milestones.",
+                is_read=False,
+            )
+        )
+        unlocked_badges.append(
+            {
+                "code": code,
+                "name": badge.name,
+                "description": badge.description,
+                "category": badge.category,
+                "awarded_at": datetime.utcnow(),
+                "metadata": {"source": "training_milestone", "audience": "bulk_generator"},
+            }
+        )
+
     db.commit()
     db.refresh(progress)
-    return ApiEnvelope(message="Lesson marked complete.", data={"progress": {"module_id": progress.module_id, "completed": progress.completed}})
+    return ApiEnvelope(
+        message="Lesson marked complete.",
+        data={
+            "progress": {"module_id": progress.module_id, "completed": progress.completed},
+            "newly_unlocked_badges": unlocked_badges,
+        },
+    )
 
 
 # ------------------------------

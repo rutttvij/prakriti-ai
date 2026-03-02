@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.bulk import (
-    BadgeAward,
     BulkApprovalStatus,
     BulkGenerator,
     OrganizationStatus,
@@ -32,6 +31,7 @@ from app.models.bulk import (
 from app.models.training import TrainingProgress
 from app.models.user import User, UserRole
 from app.schemas.bulk import (
+    BadgeTierSummary,
     BulkDashboardSummary,
     BulkInsightsSummary,
     BulkMeUpdateRequest,
@@ -43,6 +43,7 @@ from app.schemas.bulk import (
     WorkerPickupStatusUpdate,
 )
 from app.services.bulk_carbon_service import calculate_carbon_and_points
+from app.services.badge_engine import evaluate_bulk_worker_event_badges, list_user_badge_items
 from app.services.training_service import list_published_modules
 
 
@@ -137,22 +138,20 @@ def _ensure_wallet(db: Session, bulk_org_id: int) -> Wallet:
     return wallet
 
 
-def _award_badges_for_bulk(db: Session, *, user_id: int, score: float, pcc_balance: float) -> None:
-    existing_keys = {
-        row.badge_key
-        for row in db.query(BadgeAward).filter(BadgeAward.user_id == user_id).all()
-    }
-    to_award: list[str] = []
-
-    if "BULK_FIRST_VERIFIED" not in existing_keys:
-        to_award.append("BULK_FIRST_VERIFIED")
-    if score >= 95 and "BULK_SEGREGATION_STAR" not in existing_keys:
-        to_award.append("BULK_SEGREGATION_STAR")
-    if pcc_balance >= 100 and "BULK_CENTURY_PCC" not in existing_keys:
-        to_award.append("BULK_CENTURY_PCC")
-
-    for key in to_award:
-        db.add(BadgeAward(user_id=user_id, badge_key=key, meta_json={"source": "bulk_workflow"}))
+def _build_badge_tiers(earned_badges: list[dict]) -> list[BadgeTierSummary]:
+    codes = {str(item.get("code", "")).lower() for item in earned_badges}
+    tiers = [
+        ("bulk_workflow", ["bulk_first_verified", "bulk_segregation_star", "bulk_century_pcc"]),
+        ("worker_performance", ["worker_bulk_verifier_1", "worker_bulk_verifier_25", "worker_bulk_quality_guardian"]),
+    ]
+    return [
+        BadgeTierSummary(
+            tier_key=tier_key,
+            unlocked_count=sum(1 for code in keys if code in codes),
+            total_count=len(keys),
+        )
+        for tier_key, keys in tiers
+    ]
 
 
 def register_bulk_generator(db: Session, payload: BulkRegisterRequest) -> tuple[User, BulkGenerator]:
@@ -451,14 +450,7 @@ def get_bulk_dashboard_summary(db: Session, *, current_user: User) -> BulkDashbo
     pickup_completed = sum(1 for p in pickups if p.status in (PickupRequestStatus.COMPLETED, PickupRequestStatus.PICKED_UP))
     carbon_total = sum(float(v.carbon_saved_kgco2e or 0) for v in verifications)
 
-    recent_badges = [
-        row.badge_key
-        for row in db.query(BadgeAward)
-        .filter(BadgeAward.user_id == current_user.id)
-        .order_by(BadgeAward.created_at.desc())
-        .limit(8)
-        .all()
-    ]
+    recent_badges = list_user_badge_items(db, user_id=current_user.id, org_id=org.id, limit=8)
 
     return BulkDashboardSummary(
         total_waste_logs=total_logs,
@@ -498,13 +490,7 @@ def get_bulk_insights_summary(db: Session, *, current_user: User) -> BulkInsight
         if (v.created_at or v.verified_at)
     ])
 
-    badges = [
-        row.badge_key
-        for row in db.query(BadgeAward)
-        .filter(BadgeAward.user_id == current_user.id)
-        .order_by(BadgeAward.created_at.desc())
-        .all()
-    ]
+    badges = list_user_badge_items(db, user_id=current_user.id, org_id=org.id)
 
     return BulkInsightsSummary(
         carbon_saved_total=round(carbon_total, 3),
@@ -512,7 +498,29 @@ def get_bulk_insights_summary(db: Session, *, current_user: User) -> BulkInsight
         current_streak_days=streak_days,
         quality_30d=round(quality_30d, 2),
         earned_badges=badges,
+        badge_tiers=_build_badge_tiers(badges),
     )
+
+
+def get_bulk_badges_timeline(db: Session, *, current_user: User) -> dict:
+    org = _resolve_bulk_org_for_user(db, current_user)
+    earned_badges = list_user_badge_items(db, user_id=current_user.id, org_id=org.id)
+    return {
+        "earned_count": len(earned_badges),
+        "latest_unlocked": earned_badges[:5],
+        "timeline": earned_badges,
+        "tiers": [tier.model_dump() for tier in _build_badge_tiers(earned_badges)],
+    }
+
+
+def get_worker_badge_summary(db: Session, *, current_user: User) -> dict:
+    if current_user.role not in (UserRole.WASTE_WORKER, UserRole.SUPER_ADMIN):
+        raise HTTPException(status_code=403, detail="Worker role required.")
+    earned_badges = list_user_badge_items(db, user_id=current_user.id)
+    return {
+        "earned_count": len(earned_badges),
+        "latest_unlocked": earned_badges[:5],
+    }
 
 
 def get_bulk_training_modules(db: Session) -> list:
@@ -664,7 +672,7 @@ def verify_bulk_waste(
     current_user: User,
     payload: VerificationCreate,
     proof_photo: UploadFile | None,
-) -> tuple[Verification, Wallet]:
+) -> tuple[Verification, Wallet, list[dict]]:
     if current_user.role not in (UserRole.WASTE_WORKER, UserRole.SUPER_ADMIN):
         raise HTTPException(status_code=403, detail="Worker role required.")
 
@@ -776,20 +784,36 @@ def verify_bulk_waste(
             pickup.status_note = payload.notes or pickup.status_note
             db.add(pickup)
 
-        # award lightweight badge keys for Bulk insights page
         org = db.get(BulkGenerator, log.bulk_generator_id)
-        if org:
-            _award_badges_for_bulk(
+        unlocked_badges: list[dict] = []
+        if org is not None:
+            awarded = evaluate_bulk_worker_event_badges(
                 db,
-                user_id=org.user_id,
-                score=score,
-                pcc_balance=float(wallet.balance_pcc or 0),
+                bulk_user_id=org.user_id,
+                worker_user_id=current_user.id if current_user.role == UserRole.WASTE_WORKER else None,
+                org_id=org.id,
+                event_type="bulk_verification",
+                event_payload={
+                    "waste_log_id": log.id,
+                    "pickup_request_id": pickup.id if pickup else None,
+                    "score": score,
+                    "pcc_snapshot": float(wallet.balance_pcc or 0),
+                },
             )
+            unlocked_badges = [
+                {
+                    "code": badge.code or badge.criteria_key or f"badge_{badge.id}",
+                    "name": badge.name,
+                    "description": badge.description,
+                    "category": badge.category,
+                }
+                for badge in (awarded.get("bulk", []) + awarded.get("worker", []))
+            ]
 
         db.commit()
         db.refresh(verification)
         db.refresh(wallet)
-        return verification, wallet
+        return verification, wallet, unlocked_badges
     except Exception:
         db.rollback()
         raise
@@ -899,4 +923,5 @@ def verify_waste_log(
         reject_weight_kg=0,
         notes=remarks,
     )
-    return verify_bulk_waste(db, current_user=current_user, payload=payload, proof_photo=evidence)
+    verification, wallet, _ = verify_bulk_waste(db, current_user=current_user, payload=payload, proof_photo=evidence)
+    return verification, wallet

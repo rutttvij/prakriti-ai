@@ -14,6 +14,14 @@ type BulkAssignedJob = {
   created_at: string;
 };
 
+type BadgeItem = {
+  code: string;
+  name: string;
+  description?: string | null;
+  category: string;
+  awarded_at?: string;
+};
+
 function formatIST(input: string | Date | null | undefined) {
   if (!input) return "";
   const d = input instanceof Date ? input : new Date(input);
@@ -34,6 +42,11 @@ export function WorkerMyReportsPage() {
   const [bulkJobs, setBulkJobs] = useState<BulkAssignedJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [badgeSummary, setBadgeSummary] = useState<{ earned_count: number; latest_unlocked: BadgeItem[] }>({
+    earned_count: 0,
+    latest_unlocked: [],
+  });
   const [actingJobId, setActingJobId] = useState<number | null>(null);
 
   const [verifyJobId, setVerifyJobId] = useState<number | null>(null);
@@ -51,6 +64,7 @@ export function WorkerMyReportsPage() {
       ]);
       setReports(reportsRes.data);
       setBulkJobs(jobsRes.data?.data?.items ?? []);
+      setBadgeSummary(jobsRes.data?.data?.badge_summary ?? { earned_count: 0, latest_unlocked: [] });
     } catch (err) {
       console.error(err);
       setError("Failed to load your assigned jobs.");
@@ -73,6 +87,7 @@ export function WorkerMyReportsPage() {
     try {
       setActingJobId(jobId);
       await api.post(`/worker/jobs/${jobId}/status`, { status });
+      setSuccess(`Job #${jobId} moved to ${status.replaceAll("_", " ")}.`);
       await load();
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Failed to update bulk job status.");
@@ -106,9 +121,15 @@ export function WorkerMyReportsPage() {
       form.append("reject_weight_kg", String(rw));
       if (verifyNotes.trim()) form.append("notes", verifyNotes.trim());
       if (verifyPhoto) form.append("proof_photo", verifyPhoto);
-      await api.post("/worker/verifications", form, {
+      const response = await api.post("/worker/verifications", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      const unlocked = (response.data?.data?.unlocked_badges ?? []) as BadgeItem[];
+      setSuccess(
+        unlocked.length > 0
+          ? `Badge unlocked: ${unlocked.map((b) => b.name).join(", ")}`
+          : "Verification submitted successfully."
+      );
       setVerifyJobId(null);
       setVerifyWeight("");
       setRejectWeight("0");
@@ -134,6 +155,23 @@ export function WorkerMyReportsPage() {
       </section>
 
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {success && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div>}
+
+      <section className="surface-card p-5">
+        <h2 className="text-lg font-bold text-slate-900">Badge Progress</h2>
+        <p className="mt-1 text-sm text-slate-600">Earned badges: {badgeSummary.earned_count}</p>
+        {(badgeSummary.latest_unlocked?.length ?? 0) > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {badgeSummary.latest_unlocked.map((badge) => (
+              <span key={`${badge.code}-${badge.awarded_at ?? ""}`} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                {badge.name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-slate-500">No worker badges unlocked yet.</p>
+        )}
+      </section>
 
       <section className="surface-card-strong rounded-[1.8rem] px-5 py-4">
         <h2 className="mb-3 text-2xl font-semibold text-slate-900">Bulk Pickup Jobs</h2>

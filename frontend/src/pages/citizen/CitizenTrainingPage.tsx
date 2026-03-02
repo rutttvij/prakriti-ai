@@ -98,8 +98,13 @@ export default function CitizenTrainingPage() {
   const completeModule = async (moduleId: number) => {
     setBusyId(moduleId);
     try {
-      await completeCitizenTrainingModule(moduleId);
-      setOk("Module marked complete.");
+      const response = await completeCitizenTrainingModule(moduleId);
+      const unlocked = response?.newly_unlocked_badges ?? [];
+      setOk(
+        unlocked.length > 0
+          ? `Module marked complete. Badge unlocked: ${unlocked.map((b: any) => b.name).join(", ")}`
+          : "Module marked complete."
+      );
       await load();
     } catch (e: any) {
       setError(e?.response?.data?.detail || "Failed to mark module complete.");

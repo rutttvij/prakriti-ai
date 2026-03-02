@@ -20,6 +20,7 @@ import type {
   AdminZone,
   CitizenHousehold,
   CitizenPccSummary,
+  CitizenBadgeSummary,
   CitizenSegregationLog,
   CitizenSegregationSummary,
   CitizenTrainingModule,
@@ -216,6 +217,11 @@ export const fetchCitizenSegregationSummary = async (params?: {
 
 export const fetchCitizenPccSummary = async () => {
   const res = await api.get<CitizenPccSummary>("/citizen/pcc/summary");
+  return res.data;
+};
+
+export const fetchCitizenBadgesSummary = async () => {
+  const res = await api.get<CitizenBadgeSummary>("/citizen/badges/me");
   return res.data;
 };
 

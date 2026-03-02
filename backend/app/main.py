@@ -90,6 +90,8 @@ def ensure_pcc_schema_compat() -> None:
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS contamination_rate DOUBLE PRECISION NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS quality_score DOUBLE PRECISION NOT NULL DEFAULT 1.0;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS evidence_url VARCHAR(500) NULL;"))
+        # Legacy DBs may still enforce evidence_path as NOT NULL even though proof photo is optional.
+        conn.execute(text("ALTER TABLE IF EXISTS verifications ALTER COLUMN evidence_path DROP NOT NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS reject_weight_kg DOUBLE PRECISION NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION NOT NULL DEFAULT 0.0;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS carbon_saved_kgco2e DOUBLE PRECISION NOT NULL DEFAULT 0.0;"))

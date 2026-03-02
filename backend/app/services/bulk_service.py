@@ -716,7 +716,8 @@ def verify_bulk_waste(
             pcc_awarded=float(pcc_awarded),
             carbon_saved_kg=float(carbon_saved),
             points_awarded=float(pcc_awarded),
-            evidence_path=proof_path,
+            # Keep a compatibility fallback for legacy schemas where evidence_path was NOT NULL.
+            evidence_path=proof_path or "",
             remarks=payload.notes,
             meta_json={"category": log.category.value, "workflow": "bulk"},
             created_at=_utc_now(),

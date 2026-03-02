@@ -68,7 +68,33 @@ def get_public_stats(db: Session) -> StatsSummary:
         else:
             avg_resolution_time_hours = 0.0
 
-        open_reports = _int_scalar(db, "SELECT COUNT(*) FROM waste_reports WHERE status != 'RESOLVED'", default=0) if _table_exists(db, "waste_reports") else 0
+        open_citizen_reports = (
+            _int_scalar(
+                db,
+                """
+                SELECT COUNT(*)
+                FROM waste_reports
+                WHERE UPPER(COALESCE(status::text, 'OPEN')) != 'RESOLVED'
+                """,
+                default=0,
+            )
+            if _table_exists(db, "waste_reports")
+            else 0
+        )
+        open_bulk_pickups = (
+            _int_scalar(
+                db,
+                """
+                SELECT COUNT(*)
+                FROM pickup_requests
+                WHERE UPPER(COALESCE(status::text, 'REQUESTED')) NOT IN ('COMPLETED', 'CANCELLED')
+                """,
+                default=0,
+            )
+            if _table_exists(db, "pickup_requests")
+            else 0
+        )
+        open_reports = open_citizen_reports + open_bulk_pickups
 
         return StatsSummary(
             total_users=total_users,

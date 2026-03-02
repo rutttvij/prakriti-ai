@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  completeCitizenTrainingModule,
-  fetchBulkTrainingModules,
-  fetchMyTrainingProgress,
-} from "../../lib/api";
-import type { CitizenTrainingModule, TrainingProgressItem } from "../../lib/types";
+import api, { fetchMyTrainingProgress } from "../../lib/api";
+import type { TrainingProgressItem } from "../../lib/types";
 
-const BULK_LESSON_PROGRESS_KEY = "bulk_training_lesson_progress_v1";
+type Lesson = {
+  id: number;
+  title: string;
+  lesson_type: string;
+  content: string;
+};
+
+type Module = {
+  id: number;
+  title: string;
+  summary?: string;
+  lessons?: Lesson[];
+};
+
+const BULK_LESSON_PROGRESS_KEY = "bulk_training_lesson_progress_v2";
 
 type LessonProgressMap = Record<string, number[]>;
 
@@ -36,7 +46,7 @@ function isHttpUrl(value: string): boolean {
 }
 
 export default function BulkTrainingPage() {
-  const [modules, setModules] = useState<CitizenTrainingModule[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [progressItems, setProgressItems] = useState<TrainingProgressItem[]>([]);
   const [lessonProgress, setLessonProgress] = useState<LessonProgressMap>(() => readLessonProgress());
 
@@ -49,8 +59,11 @@ export default function BulkTrainingPage() {
     setLoading(true);
     setError(null);
     try {
-      const [mods, myProgress] = await Promise.all([fetchBulkTrainingModules(), fetchMyTrainingProgress()]);
-      setModules(mods);
+      const [modsRes, myProgress] = await Promise.all([
+        api.get("/bulk/training/modules"),
+        fetchMyTrainingProgress(),
+      ]);
+      setModules(modsRes.data?.data?.modules ?? []);
       setProgressItems(myProgress);
     } catch (e: any) {
       setError(e?.response?.data?.detail || "Failed to load bulk training data.");
@@ -100,7 +113,11 @@ export default function BulkTrainingPage() {
   const completeModule = async (moduleId: number) => {
     setBusyModuleId(moduleId);
     try {
-      await completeCitizenTrainingModule(moduleId);
+      await api.post("/bulk/training/complete-lesson", (() => {
+        const f = new FormData();
+        f.append("module_id", String(moduleId));
+        return f;
+      })());
       setOk("Module marked complete.");
       await load();
     } catch (e: any) {
@@ -110,7 +127,7 @@ export default function BulkTrainingPage() {
     }
   };
 
-  const openLesson = async (module: CitizenTrainingModule, lessonId: number, content: string) => {
+  const openLesson = async (module: Module, lessonId: number, content: string) => {
     setError(null);
     setOk(null);
 
@@ -133,10 +150,10 @@ export default function BulkTrainingPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Bulk Training</h1>
-        <p className="mt-1 text-sm text-slate-600">Open each lesson in a module. Module completes when all lessons are completed.</p>
-      </div>
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <h1 className="text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Bulk Training</h1>
+        <p className="mt-1 text-sm text-emerald-100">Complete compliance and segregation modules for bulk operations teams.</p>
+      </section>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="surface-card p-4">
@@ -183,8 +200,8 @@ export default function BulkTrainingPage() {
                         done
                           ? "bg-emerald-100 text-emerald-800"
                           : busyModuleId === m.id
-                          ? "bg-sky-100 text-sky-800"
-                          : "bg-amber-100 text-amber-800"
+                            ? "bg-sky-100 text-sky-800"
+                            : "bg-amber-100 text-amber-800"
                       }`}
                     >
                       {done ? "Completed" : busyModuleId === m.id ? "Saving..." : "Pending"}
@@ -203,10 +220,7 @@ export default function BulkTrainingPage() {
                               <p className="truncate text-sm font-medium text-slate-900">{lesson.title}</p>
                               <p className="text-xs text-slate-500 capitalize">{lesson.lesson_type}</p>
                             </div>
-                            <button
-                              className="btn-secondary px-3 py-1 text-xs"
-                              onClick={() => openLesson(m, lesson.id, lesson.content)}
-                            >
+                            <button className="btn-secondary px-3 py-1 text-xs" onClick={() => openLesson(m, lesson.id, lesson.content)}>
                               {lessonDone ? "Open Again" : "Open Lesson"}
                             </button>
                           </div>

@@ -27,14 +27,23 @@ class BulkApprovalStatus(str, enum.Enum):
     REJECTED = "REJECTED"
 
 
+class OrganizationStatus(str, enum.Enum):
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 class WasteLogCategory(str, enum.Enum):
     DRY = "DRY"
     WET = "WET"
     PLASTIC = "PLASTIC"
+    PAPER = "PAPER"
     METAL = "METAL"
     GLASS = "GLASS"
     E_WASTE = "E_WASTE"
     HAZARDOUS = "HAZARDOUS"
+    TEXTILE = "TEXTILE"
+    MIXED = "MIXED"
     ORGANIC = "ORGANIC"
 
 
@@ -43,11 +52,15 @@ class WasteLogStatus(str, enum.Enum):
     PICKUP_REQUESTED = "PICKUP_REQUESTED"
     PICKED_UP = "PICKED_UP"
     VERIFIED = "VERIFIED"
+    CREDITED = "CREDITED"
     REJECTED = "REJECTED"
 
 
 class PickupRequestStatus(str, enum.Enum):
     REQUESTED = "REQUESTED"
+    ASSIGNED = "ASSIGNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
     ACCEPTED = "ACCEPTED"
     IN_TRANSIT = "IN_TRANSIT"
     PICKED_UP = "PICKED_UP"
@@ -65,6 +78,11 @@ class TransactionStatus(str, enum.Enum):
     REVERSED = "REVERSED"
 
 
+class WalletOwnerType(str, enum.Enum):
+    CITIZEN = "CITIZEN"
+    BULK = "BULK"
+
+
 class BulkGenerator(Base):
     __tablename__ = "bulk_generators"
 
@@ -72,10 +90,17 @@ class BulkGenerator(Base):
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
 
     organization_name = Column(String(255), nullable=False)
-    organization_type = Column(String(100), nullable=True)
+    industry_type = Column(String(80), nullable=True)
+    registration_or_license_no = Column(String(120), nullable=True)
+    estimated_daily_waste_kg = Column(Float, nullable=True)
+    waste_categories = Column(JSONB, nullable=False, server_default="[]")
     address = Column(String(500), nullable=True)
-    city = Column(String(120), nullable=True)
+    ward = Column(String(120), nullable=True)
     pincode = Column(String(6), nullable=True)
+
+    # Compatibility fields from prior schema.
+    organization_type = Column(String(100), nullable=True)
+    city = Column(String(120), nullable=True)
     license_number = Column(String(120), nullable=True, index=True)
 
     approval_status = Column(
@@ -83,6 +108,7 @@ class BulkGenerator(Base):
         nullable=False,
         default=BulkApprovalStatus.PENDING,
     )
+    status = Column(String(32), nullable=False, default=OrganizationStatus.PENDING_APPROVAL.value, index=True)
     approved_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -92,7 +118,7 @@ class BulkGenerator(Base):
 
     user = relationship("User", foreign_keys=[user_id], backref="bulk_generator_profile")
     approved_by = relationship("User", foreign_keys=[approved_by_user_id], backref="approved_bulk_generators")
-    waste_logs = relationship("WasteLog", back_populates="bulk_generator")
+    waste_logs = relationship("WasteLog", back_populates="bulk_generator", foreign_keys="WasteLog.bulk_generator_id")
     wallet = relationship("Wallet", back_populates="bulk_generator", uselist=False)
 
 
@@ -101,6 +127,9 @@ class WasteLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bulk_generator_id = Column(Integer, ForeignKey("bulk_generators.id"), nullable=True, index=True)
+    bulk_org_id = Column(Integer, ForeignKey("bulk_generators.id"), nullable=True, index=True)
+    citizen_household_id = Column(Integer, ForeignKey("households.id"), nullable=True, index=True)
+
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     org_id = Column(Integer, nullable=True, index=True)
@@ -108,9 +137,11 @@ class WasteLog(Base):
     category = Column(Enum(WasteLogCategory, name="wastelogcategory"), nullable=False, index=True)
     weight_kg = Column(Float, nullable=False)
     logged_weight = Column(Float, nullable=True)
-    photo_path = Column(String(500), nullable=False)
+
+    photo_path = Column(String(500), nullable=True)
     image_url = Column(String(500), nullable=True)
     notes = Column(String(1000), nullable=True)
+
     verification_status = Column(String(16), nullable=False, default="pending", index=True)
     quality_level = Column(String(16), nullable=True, index=True)
     pcc_status = Column(String(16), nullable=False, default="pending", index=True)
@@ -125,9 +156,11 @@ class WasteLog(Base):
         index=True,
     )
     logged_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
-    bulk_generator = relationship("BulkGenerator", back_populates="waste_logs")
+    bulk_generator = relationship("BulkGenerator", foreign_keys=[bulk_generator_id], back_populates="waste_logs")
+    bulk_org = relationship("BulkGenerator", foreign_keys=[bulk_org_id])
     created_by = relationship("User", foreign_keys=[created_by_user_id], backref="created_waste_logs")
     user = relationship("User", foreign_keys=[user_id], backref="pcc_waste_logs")
     awarded_by = relationship("User", foreign_keys=[awarded_by_user_id], backref="awarded_bulk_waste_logs")
@@ -140,6 +173,7 @@ class PickupRequest(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     waste_log_id = Column(Integer, ForeignKey("waste_logs.id"), nullable=False, index=True)
+    bulk_org_id = Column(Integer, ForeignKey("bulk_generators.id"), nullable=True, index=True)
     requested_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     assigned_worker_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
@@ -150,6 +184,7 @@ class PickupRequest(Base):
         index=True,
     )
     scheduled_at = Column(DateTime(timezone=True), nullable=True)
+    note = Column(String(500), nullable=True)
     status_note = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
@@ -157,6 +192,7 @@ class PickupRequest(Base):
     waste_log = relationship("WasteLog", back_populates="pickup_requests")
     requested_by = relationship("User", foreign_keys=[requested_by_user_id], backref="bulk_pickup_requests")
     assigned_worker = relationship("User", foreign_keys=[assigned_worker_id], backref="assigned_pickups")
+    bulk_org = relationship("BulkGenerator", foreign_keys=[bulk_org_id])
     verification = relationship("Verification", back_populates="pickup_request", uselist=False)
 
 
@@ -167,17 +203,27 @@ class Verification(Base):
     waste_log_id = Column(Integer, ForeignKey("waste_logs.id"), unique=True, nullable=False, index=True)
     pickup_request_id = Column(Integer, ForeignKey("pickup_requests.id"), nullable=True, index=True)
     verified_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    verifier_worker_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     verifier_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     verified_weight_kg = Column(Float, nullable=False)
+    reject_weight_kg = Column(Float, nullable=True)
     verified_weight = Column(Float, nullable=True)
     contamination_rate = Column(Float, nullable=True)
     quality_score = Column(Float, nullable=False, default=1.0)
-    evidence_path = Column(String(500), nullable=False)
+
+    evidence_path = Column(String(500), nullable=True)
     evidence_url = Column(String(500), nullable=True)
     remarks = Column(String(1000), nullable=True)
-    verified_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
+    score = Column(Float, nullable=False, default=0.0)
+    carbon_saved_kgco2e = Column(Float, nullable=False, default=0.0)
+    pcc_awarded = Column(Float, nullable=False, default=0.0)
+
+    verified_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Backward compatibility fields
     carbon_saved_kg = Column(Float, nullable=False, default=0.0)
     points_awarded = Column(Float, nullable=False, default=0.0)
     meta_json = Column("metadata", JSONB, nullable=False, server_default="{}")
@@ -186,6 +232,7 @@ class Verification(Base):
     pickup_request = relationship("PickupRequest", back_populates="verification")
     verified_by = relationship("User", foreign_keys=[verified_by_user_id], backref="bulk_verifications")
     verifier = relationship("User", foreign_keys=[verifier_id], backref="pcc_verifications")
+    verifier_worker = relationship("User", foreign_keys=[verifier_worker_id], backref="worker_verifications")
 
 
 class Wallet(Base):
@@ -235,3 +282,28 @@ class Transaction(Base):
     wallet = relationship("Wallet", back_populates="transactions")
     verification = relationship("Verification", backref="transactions")
     actor = relationship("User", foreign_keys=[created_by_user_id], backref="issued_transactions")
+
+
+class WalletLedger(Base):
+    __tablename__ = "wallet_ledger"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_type = Column(Enum(WalletOwnerType, name="walletownertype"), nullable=False, index=True)
+    owner_id = Column(Integer, nullable=False, index=True)
+    delta_pcc = Column(Float, nullable=False)
+    reason = Column(String(255), nullable=False)
+    ref_type = Column(String(64), nullable=True)
+    ref_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+
+
+class BadgeAward(Base):
+    __tablename__ = "badge_awards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    badge_key = Column(String(120), nullable=False, index=True)
+    meta_json = Column("metadata", JSONB, nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+
+    user = relationship("User", backref="badge_awards")

@@ -23,6 +23,7 @@ from app.api import segregation as segregation_router
 from app.api import training as training_router
 from app.api import waste as waste_file_router
 from app.api import waste_reporting as waste_router
+from app.api import worker_jobs as worker_jobs_router
 from app.api.v1 import admin_content as admin_content_router
 from app.api.v1 import admin_ops as admin_ops_router
 from app.api.v1 import admin_contact_messages as admin_contact_messages_router
@@ -48,6 +49,21 @@ def ensure_postgres_enum_values() -> None:
                     ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'BULK_MANAGER';
                     ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'BULK_STAFF';
                   END IF;
+                  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'pickuprequeststatus') THEN
+                    ALTER TYPE pickuprequeststatus ADD VALUE IF NOT EXISTS 'ASSIGNED';
+                    ALTER TYPE pickuprequeststatus ADD VALUE IF NOT EXISTS 'IN_PROGRESS';
+                    ALTER TYPE pickuprequeststatus ADD VALUE IF NOT EXISTS 'COMPLETED';
+                    ALTER TYPE pickuprequeststatus ADD VALUE IF NOT EXISTS 'CANCELLED';
+                    ALTER TYPE pickuprequeststatus ADD VALUE IF NOT EXISTS 'ACCEPTED';
+                    ALTER TYPE pickuprequeststatus ADD VALUE IF NOT EXISTS 'IN_TRANSIT';
+                    ALTER TYPE pickuprequeststatus ADD VALUE IF NOT EXISTS 'PICKED_UP';
+                  END IF;
+                  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'wastelogstatus') THEN
+                    ALTER TYPE wastelogstatus ADD VALUE IF NOT EXISTS 'CREDITED';
+                    ALTER TYPE wastelogstatus ADD VALUE IF NOT EXISTS 'VERIFIED';
+                    ALTER TYPE wastelogstatus ADD VALUE IF NOT EXISTS 'PICKUP_REQUESTED';
+                    ALTER TYPE wastelogstatus ADD VALUE IF NOT EXISTS 'PICKED_UP';
+                  END IF;
                 END $$;
                 """
             )
@@ -64,12 +80,21 @@ def ensure_pcc_schema_compat() -> None:
         conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS logged_weight DOUBLE PRECISION NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS image_url VARCHAR(500) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS bulk_org_id INTEGER NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS citizen_household_id INTEGER NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS waste_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();"))
 
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS verifier_id INTEGER NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS verifier_worker_id INTEGER NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS verified_weight DOUBLE PRECISION NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS contamination_rate DOUBLE PRECISION NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS quality_score DOUBLE PRECISION NOT NULL DEFAULT 1.0;"))
         conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS evidence_url VARCHAR(500) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS reject_weight_kg DOUBLE PRECISION NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS score DOUBLE PRECISION NOT NULL DEFAULT 0.0;"))
+        conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS carbon_saved_kgco2e DOUBLE PRECISION NOT NULL DEFAULT 0.0;"))
+        conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS pcc_awarded DOUBLE PRECISION NOT NULL DEFAULT 0.0;"))
+        conn.execute(text("ALTER TABLE IF EXISTS verifications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();"))
 
         conn.execute(text("ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS user_id INTEGER NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;"))
@@ -78,6 +103,61 @@ def ensure_pcc_schema_compat() -> None:
 
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS user_id INTEGER NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS org_id INTEGER NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS industry_type VARCHAR(80) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS registration_or_license_no VARCHAR(120) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS estimated_daily_waste_kg DOUBLE PRECISION NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS waste_categories JSONB NOT NULL DEFAULT '[]'::jsonb;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS address VARCHAR(500) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS ward VARCHAR(120) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS pincode VARCHAR(6) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS organization_type VARCHAR(100) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS city VARCHAR(120) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS license_number VARCHAR(120) NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS bulk_generators ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'PENDING_APPROVAL';"))
+        conn.execute(text("ALTER TABLE IF EXISTS pickup_requests ADD COLUMN IF NOT EXISTS bulk_org_id INTEGER NULL;"))
+        conn.execute(text("ALTER TABLE IF EXISTS pickup_requests ADD COLUMN IF NOT EXISTS note VARCHAR(500) NULL;"))
+
+        conn.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'walletownertype') THEN
+                    CREATE TYPE walletownertype AS ENUM ('CITIZEN', 'BULK');
+                  END IF;
+                END $$;
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS wallet_ledger (
+                    id SERIAL PRIMARY KEY,
+                    owner_type walletownertype NOT NULL,
+                    owner_id INTEGER NOT NULL,
+                    delta_pcc DOUBLE PRECISION NOT NULL,
+                    reason VARCHAR(255) NOT NULL,
+                    ref_type VARCHAR(64) NULL,
+                    ref_id INTEGER NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS badge_awards (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    badge_key VARCHAR(120) NOT NULL,
+                    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+                """
+            )
+        )
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS type VARCHAR(20) NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS amount_pcc DOUBLE PRECISION NULL;"))
         conn.execute(text("ALTER TABLE IF EXISTS transactions ADD COLUMN IF NOT EXISTS reason VARCHAR(500) NULL;"))
@@ -502,6 +582,7 @@ def create_app() -> FastAPI:
     app.include_router(waste_router.router, prefix=api_prefix)
     app.include_router(facilities_router.router, prefix=api_prefix)
     app.include_router(bulk_router.router, prefix=api_prefix)
+    app.include_router(worker_jobs_router.router, prefix=api_prefix)
 
     # Admin / city ops
     app.include_router(city_router.router, prefix=api_prefix)

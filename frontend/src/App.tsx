@@ -46,6 +46,7 @@ import BulkPickupRequestsPage from "./pages/bulk/BulkPickupRequestsPage";
 import BulkTrainingPage from "./pages/bulk/BulkTrainingPage";
 import BulkInsightsPage from "./pages/bulk/BulkInsightsPage";
 import AppDashboard from "./pages/app/Dashboard";
+import { BulkRoute } from "./components/BulkRoute";
 
 /* Layout & Auth */
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -114,31 +115,37 @@ function App() {
             path="/bulk/dashboard"
             element={
               <ProtectedRoute>
-                <BulkLayout>
-                  <BulkDashboardPage />
-                </BulkLayout>
+                <BulkRoute>
+                  <BulkLayout>
+                    <BulkDashboardPage />
+                  </BulkLayout>
+                </BulkRoute>
               </ProtectedRoute>
             }
           />
 
           <Route
-            path="/bulk/waste-log"
+            path="/bulk/log-waste"
             element={
               <ProtectedRoute>
-                <BulkLayout>
-                  <BulkWasteLogPage />
-                </BulkLayout>
+                <BulkRoute>
+                  <BulkLayout>
+                    <BulkWasteLogPage />
+                  </BulkLayout>
+                </BulkRoute>
               </ProtectedRoute>
             }
           />
 
           <Route
-            path="/bulk/pickups"
+            path="/bulk/pickup-requests"
             element={
               <ProtectedRoute>
-                <BulkLayout>
-                  <BulkPickupRequestsPage />
-                </BulkLayout>
+                <BulkRoute>
+                  <BulkLayout>
+                    <BulkPickupRequestsPage />
+                  </BulkLayout>
+                </BulkRoute>
               </ProtectedRoute>
             }
           />
@@ -147,23 +154,30 @@ function App() {
             path="/bulk/training"
             element={
               <ProtectedRoute>
-                <BulkLayout>
-                  <BulkTrainingPage />
-                </BulkLayout>
+                <BulkRoute>
+                  <BulkLayout>
+                    <BulkTrainingPage />
+                  </BulkLayout>
+                </BulkRoute>
               </ProtectedRoute>
             }
           />
 
           <Route
-            path="/bulk/insights"
+            path="/bulk/impact-insights"
             element={
               <ProtectedRoute>
-                <BulkLayout>
-                  <BulkInsightsPage />
-                </BulkLayout>
+                <BulkRoute>
+                  <BulkLayout>
+                    <BulkInsightsPage />
+                  </BulkLayout>
+                </BulkRoute>
               </ProtectedRoute>
             }
           />
+          <Route path="/bulk/waste-log" element={<Navigate to="/bulk/log-waste" replace />} />
+          <Route path="/bulk/pickups" element={<Navigate to="/bulk/pickup-requests" replace />} />
+          <Route path="/bulk/insights" element={<Navigate to="/bulk/impact-insights" replace />} />
 
           <Route
             path="/training"

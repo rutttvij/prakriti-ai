@@ -8,10 +8,10 @@ type Props = {
 export default function BulkLayout({ children }: Props) {
   const navItems = [
     { to: "/bulk/dashboard", label: "Dashboard", end: true },
-    { to: "/bulk/waste-log", label: "Log Waste" },
-    { to: "/bulk/pickups", label: "Pickup Requests" },
+    { to: "/bulk/log-waste", label: "Log Waste" },
+    { to: "/bulk/pickup-requests", label: "Pickup Requests" },
     { to: "/bulk/training", label: "Training" },
-    { to: "/bulk/insights", label: "Impact Insights" },
+    { to: "/bulk/impact-insights", label: "Impact Insights" },
   ];
 
   return (

@@ -13,7 +13,9 @@ from app.core.security import (
 from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserRead, UserProfileUpdate
 from app.schemas.auth import Token
+from app.schemas.bulk import BulkRegisterRequest
 from app.api import deps
+from app.services.bulk_service import register_bulk_generator
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -76,6 +78,19 @@ def register_user(
     db.refresh(db_user)
 
     return db_user
+
+
+@router.post("/register/bulk", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+def register_bulk_user(
+    payload: BulkRegisterRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Enterprise-style bulk registration.
+    Creates both owner user and organization profile in pending state.
+    """
+    user, _ = register_bulk_generator(db, payload)
+    return user
 
 
 # ---------------------------------------------------------

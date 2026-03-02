@@ -10,7 +10,7 @@ type WasteLog = {
   logged_at: string;
 };
 
-const CATEGORIES = ["DRY", "WET", "PLASTIC", "METAL", "GLASS", "E_WASTE", "HAZARDOUS", "ORGANIC"];
+const CATEGORIES = ["PLASTIC", "PAPER", "GLASS", "METAL", "WET", "E_WASTE", "HAZARDOUS", "TEXTILE", "MIXED"];
 
 export default function BulkWasteLogPage() {
   const [category, setCategory] = useState("PLASTIC");
@@ -28,7 +28,8 @@ export default function BulkWasteLogPage() {
     try {
       setLoadingLogs(true);
       const res = await api.get("/bulk/waste-logs", { params: { limit: 25 } });
-      setLogs(res.data?.data?.waste_logs ?? []);
+      const items = res.data?.data?.items ?? res.data?.data?.waste_logs ?? [];
+      setLogs(items);
     } catch {
       setLogs([]);
     } finally {
@@ -37,7 +38,7 @@ export default function BulkWasteLogPage() {
   };
 
   useEffect(() => {
-    loadLogs();
+    void loadLogs();
   }, []);
 
   const submit = async (e: FormEvent) => {
@@ -50,20 +51,16 @@ export default function BulkWasteLogPage() {
       setError("Enter a valid weight in kg.");
       return;
     }
-    if (!photo) {
-      setError("Upload a photo for the waste log.");
-      return;
-    }
 
     const form = new FormData();
     form.append("category", category);
     form.append("weight_kg", String(parsedWeight));
     if (notes.trim()) form.append("notes", notes.trim());
-    form.append("photo", photo);
+    if (photo) form.append("photo", photo);
 
     try {
       setSaving(true);
-      await api.post("/bulk/waste-log", form, {
+      await api.post("/bulk/waste-logs", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setSuccess("Waste log created successfully.");
@@ -80,9 +77,13 @@ export default function BulkWasteLogPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Log Waste</h1>
-        <p className="mt-1 text-sm text-slate-600">Add category, measured weight, and photo for verification and PCC crediting.</p>
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <h1 className="text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Log Waste</h1>
+        <p className="mt-1 text-sm text-emerald-100">Create bulk waste logs and move each log through pickup and verification.</p>
+      </section>
+
+      <div className="surface-card-strong p-4 text-xs text-slate-600">
+        Status flow: <span className="font-semibold text-slate-800">LOGGED</span> → <span className="font-semibold text-slate-800">PICKUP_REQUESTED</span> → <span className="font-semibold text-slate-800">PICKED_UP</span> → <span className="font-semibold text-slate-800">VERIFIED</span> → <span className="font-semibold text-slate-800">CREDITED</span>
       </div>
 
       <form onSubmit={submit} className="surface-card p-5">
@@ -91,7 +92,7 @@ export default function BulkWasteLogPage() {
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Category</label>
             <select className="ui-input" value={category} onChange={(e) => setCategory(e.target.value)}>
               {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>{c.replaceAll("_", " ")}</option>
               ))}
             </select>
           </div>
@@ -103,7 +104,7 @@ export default function BulkWasteLogPage() {
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Photo</label>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Photo (optional)</label>
             <input className="ui-input" type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
           </div>
           <div>
@@ -142,8 +143,8 @@ export default function BulkWasteLogPage() {
                 {logs.map((log) => (
                   <tr key={log.id} className="border-b border-slate-100 text-slate-700">
                     <td className="py-2 pr-3 font-semibold">#{log.id}</td>
-                    <td className="py-2 pr-3">{log.category}</td>
-                    <td className="py-2 pr-3">{log.weight_kg.toFixed(2)} kg</td>
+                    <td className="py-2 pr-3">{log.category.replaceAll("_", " ")}</td>
+                    <td className="py-2 pr-3">{Number(log.weight_kg || 0).toFixed(2)} kg</td>
                     <td className="py-2 pr-3">{log.status}</td>
                     <td className="py-2 pr-3">{new Date(log.logged_at).toLocaleString()}</td>
                   </tr>

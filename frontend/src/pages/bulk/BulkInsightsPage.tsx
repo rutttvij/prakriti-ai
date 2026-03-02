@@ -1,24 +1,16 @@
 import { useEffect, useState } from "react";
 import api from "../../lib/api";
 
-type Impact = {
-  total_carbon_saved_kgco2e: number;
-  total_pcc_earned: number;
+type InsightsSummary = {
+  carbon_saved_total: number;
+  pcc_earned_total: number;
   current_streak_days: number;
-  rolling_quality_30d: number | null;
-};
-
-type BadgeEntry = {
-  badge: {
-    name: string;
-    category: string;
-  };
-  awarded_at: string;
+  quality_30d: number;
+  earned_badges: string[];
 };
 
 export default function BulkInsightsPage() {
-  const [impact, setImpact] = useState<Impact | null>(null);
-  const [badges, setBadges] = useState<BadgeEntry[]>([]);
+  const [summary, setSummary] = useState<InsightsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,28 +20,18 @@ export default function BulkInsightsPage() {
       try {
         setLoading(true);
         setError(null);
-        const [impactRes, badgesRes] = await Promise.allSettled([
-          api.get("/impact/me"),
-          api.get("/badges/me"),
-        ]);
-
+        const res = await api.get("/bulk/insights/summary");
         if (!active) return;
-
-        if (impactRes.status === "fulfilled") {
-          setImpact(impactRes.value.data?.data?.impact ?? null);
-        }
-        if (badgesRes.status === "fulfilled") {
-          setBadges(badgesRes.value.data?.data?.earned_badges ?? []);
-        }
-        if (impactRes.status === "rejected" && badgesRes.status === "rejected") {
-          setError("Unable to load insights right now.");
-        }
+        setSummary(res.data?.data?.summary ?? null);
+      } catch (err: any) {
+        if (!active) return;
+        setError(err?.response?.data?.detail || "Unable to load insights right now.");
       } finally {
         if (active) setLoading(false);
       }
     };
 
-    load();
+    void load();
     return () => {
       active = false;
     };
@@ -57,30 +39,30 @@ export default function BulkInsightsPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Bulk Impact Insights</h1>
-        <p className="mt-1 text-sm text-slate-600">Carbon performance, PCC progression, and badge trajectory for your bulk operations.</p>
-      </div>
+      <section className="rounded-3xl border border-white/20 bg-slate-950/26 p-5 shadow-[0_24px_50px_rgba(5,22,27,0.38)] backdrop-blur-xl">
+        <h1 className="text-4xl font-semibold !text-[#dffaf0]" style={{ color: "#dffaf0" }}>Bulk Impact Insights</h1>
+        <p className="mt-1 text-sm text-emerald-100">Carbon outcomes, PCC progression, streak performance, and earned badges.</p>
+      </section>
 
       {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="grid gap-4 md:grid-cols-4">
         <div className="surface-card p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">Carbon Saved</p>
-          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : `${(impact?.total_carbon_saved_kgco2e ?? 0).toFixed(2)}`}</p>
+          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : `${(summary?.carbon_saved_total ?? 0).toFixed(2)}`}</p>
           <p className="text-xs text-slate-500">kg CO2e</p>
         </div>
         <div className="surface-card p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">PCC Earned</p>
-          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : (impact?.total_pcc_earned ?? 0).toFixed(2)}</p>
+          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : (summary?.pcc_earned_total ?? 0).toFixed(2)}</p>
         </div>
         <div className="surface-card p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">Current Streak</p>
-          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : `${impact?.current_streak_days ?? 0}d`}</p>
+          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : `${summary?.current_streak_days ?? 0}d`}</p>
         </div>
         <div className="surface-card p-4">
           <p className="text-xs uppercase tracking-wide text-slate-500">30D Quality</p>
-          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : `${(((impact?.rolling_quality_30d ?? 0) as number) * 100).toFixed(1)}%`}</p>
+          <p className="mt-2 text-4xl font-bold text-slate-900">{loading ? "--" : `${(summary?.quality_30d ?? 0).toFixed(1)}%`}</p>
         </div>
       </div>
 
@@ -88,15 +70,14 @@ export default function BulkInsightsPage() {
         <h2 className="text-xl font-bold text-slate-900">Earned Badges</h2>
         {loading ? (
           <p className="mt-3 text-sm text-slate-500">Loading badge timeline...</p>
-        ) : badges.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">No badges earned yet. Verify more logs to unlock milestones.</p>
+        ) : (summary?.earned_badges?.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">No badges earned yet.</p>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {badges.map((entry, idx) => (
-              <div key={`${entry.badge.name}-${idx}`} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
-                <p className="text-sm font-semibold text-slate-900">{entry.badge.name}</p>
-                <p className="text-xs text-slate-500">Category: {entry.badge.category}</p>
-                <p className="mt-1 text-xs text-slate-500">Awarded: {new Date(entry.awarded_at).toLocaleDateString()}</p>
+            {summary?.earned_badges.map((badge, idx) => (
+              <div key={`${badge}-${idx}`} className="rounded-2xl border border-slate-200 bg-white/85 p-4">
+                <p className="text-sm font-semibold text-slate-900">{badge.replaceAll("_", " ")}</p>
+                <p className="mt-1 text-xs text-slate-500">Milestone unlocked via verified bulk operations.</p>
               </div>
             ))}
           </div>

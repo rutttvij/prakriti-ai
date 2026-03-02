@@ -60,6 +60,7 @@ from app.schemas.admin_ops import (
     AdminKpiSummary,
 )
 from app.services.admin_audit_service import log_admin_action
+from app.services.bulk_service import approve_bulk_org, reject_bulk_org
 from app.services.pcc_award_service import award_reference, revoke_reference
 
 router = APIRouter(prefix="/admin", tags=["admin-ops"])
@@ -229,6 +230,42 @@ def act_approval(
         metadata={"user_id": row.user_id},
     )
     db.commit()
+    return GenericOk(ok=True)
+
+
+@router.post("/approvals/{bulk_org_id}/approve", response_model=GenericOk)
+def approve_bulk_organization(
+    bulk_org_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin),
+):
+    approve_bulk_org(db, bulk_org_id=bulk_org_id, approver_user_id=current_user.id)
+    log_admin_action(
+        db,
+        actor=current_user,
+        action="approval_approve",
+        entity="bulk_generator",
+        entity_id=bulk_org_id,
+        metadata={"source": "bulk_v2"},
+    )
+    return GenericOk(ok=True)
+
+
+@router.post("/approvals/{bulk_org_id}/reject", response_model=GenericOk)
+def reject_bulk_organization(
+    bulk_org_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.require_super_admin),
+):
+    reject_bulk_org(db, bulk_org_id=bulk_org_id)
+    log_admin_action(
+        db,
+        actor=current_user,
+        action="approval_reject",
+        entity="bulk_generator",
+        entity_id=bulk_org_id,
+        metadata={"source": "bulk_v2"},
+    )
     return GenericOk(ok=True)
 
 

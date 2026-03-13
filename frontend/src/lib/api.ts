@@ -166,7 +166,20 @@ export const createCitizenWasteReport = async (payload: {
 export const classifyWasteFile = async (file: File) => {
   const form = new FormData();
   form.append("file", file);
-  const res = await api.post<{ label: string; confidence: number; file_path: string }>(
+  const res = await api.post<{
+    label: string;
+    confidence: number;
+    file_path: string;
+    display_name?: string;
+    recyclable?: boolean;
+    stream?: string;
+    recycle_steps?: string[];
+    dispose_steps?: string[];
+    do_not?: string[];
+    where_to_take?: string[];
+    guidance_source?: "label_metadata" | "fallback";
+    low_confidence_threshold?: number;
+  }>(
     "/waste/classify-file",
     form,
     {

@@ -5,6 +5,8 @@ import type { AdminApproval } from "../../lib/types";
 import type { User } from "../../types/user";
 import { useToast } from "../../components/ui/Toast";
 
+const BULK_ROLES = new Set(["BULK_GENERATOR", "BULK_MANAGER", "BULK_STAFF"]);
+
 export default function UsersApprovalsPage() {
   const { push } = useToast();
 
@@ -67,7 +69,13 @@ export default function UsersApprovalsPage() {
       push("success", `User ${activate ? "activated" : "deactivated"}.`);
       await load();
     } catch (err: any) {
-      push("error", err?.response?.data?.detail || `Failed to ${activate ? "activate" : "deactivate"} user.`);
+      const detail = err?.response?.data?.detail;
+      const statusCode = err?.response?.status;
+      if (activate && statusCode === 409) {
+        push("error", "Approve organization from Approvals tab first.");
+      } else {
+        push("error", detail || `Failed to ${activate ? "activate" : "deactivate"} user.`);
+      }
     } finally {
       setActioningUserId(null);
     }
@@ -75,7 +83,7 @@ export default function UsersApprovalsPage() {
 
   const pendingUserApprovals = useMemo(() => {
     return users
-      .filter((u) => !u.is_active && u.role !== "SUPER_ADMIN")
+      .filter((u) => !u.is_active && u.role !== "SUPER_ADMIN" && !BULK_ROLES.has(u.role))
       .map((u) => ({
         id: u.id,
         user_id: u.id,

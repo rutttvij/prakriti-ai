@@ -14,7 +14,7 @@ from app.api import deps
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.models.admin_ops import AuditLog, PlatformSetting, WorkforceAssignment, Zone
-from app.models.bulk import BulkApprovalStatus, BulkGenerator, Transaction, TransactionType, WasteLog
+from app.models.bulk import BulkApprovalStatus, BulkGenerator, OrganizationStatus, Transaction, TransactionType, WasteLog
 from app.models.contact import ContactMessage
 from app.models.household import Household, SegregationLog
 from app.models.leads import DemoRequest
@@ -180,7 +180,12 @@ def list_approvals(
     rows = (
         db.query(BulkGenerator, User)
         .join(User, BulkGenerator.user_id == User.id)
-        .filter(BulkGenerator.approval_status == BulkApprovalStatus.PENDING)
+        .filter(
+            or_(
+                BulkGenerator.status.is_(None),
+                BulkGenerator.status != OrganizationStatus.APPROVED.value,
+            )
+        )
         .order_by(BulkGenerator.created_at.desc())
         .all()
     )
@@ -211,16 +216,14 @@ def act_approval(
         raise HTTPException(status_code=404, detail="Approval request not found")
 
     if payload.decision == "approve":
-        row.approval_status = BulkApprovalStatus.APPROVED
-        row.approved_by_user_id = current_user.id
-        row.approved_at = datetime.utcnow()
-        linked = db.get(User, row.user_id)
-        if linked:
-            linked.is_active = True
-            db.add(linked)
+        approve_bulk_org(db, bulk_org_id=row.id, approver_user_id=current_user.id)
     else:
-        row.approval_status = BulkApprovalStatus.REJECTED
-    db.add(row)
+        reject_bulk_org(db, bulk_org_id=row.id)
+        linked = db.get(User, row.user_id)
+        if linked is not None:
+            linked.is_active = False
+            db.add(linked)
+
     log_admin_action(
         db,
         actor=current_user,
@@ -257,7 +260,11 @@ def reject_bulk_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.require_super_admin),
 ):
-    reject_bulk_org(db, bulk_org_id=bulk_org_id)
+    row = reject_bulk_org(db, bulk_org_id=bulk_org_id)
+    linked = db.get(User, row.user_id)
+    if linked is not None:
+        linked.is_active = False
+        db.add(linked)
     log_admin_action(
         db,
         actor=current_user,

@@ -7,6 +7,24 @@ import { useToast } from "../../components/ui/Toast";
 import { classifyWasteFile, createCitizenWasteReport, fetchCitizenHouseholds } from "../../lib/api";
 import type { CitizenHousehold } from "../../lib/types";
 
+type RecyclingGuidance = {
+  display_name?: string;
+  recyclable?: boolean;
+  stream?: string;
+  recycle_steps?: string[];
+  dispose_steps?: string[];
+  do_not?: string[];
+  where_to_take?: string[];
+  guidance_source?: "label_metadata" | "fallback";
+  low_confidence_threshold?: number;
+};
+
+const DEFAULT_LOW_CONFIDENCE_THRESHOLD = 0.6;
+
+function toReadableLabel(label: string): string {
+  return label.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function CitizenWasteReportPage() {
   const navigate = useNavigate();
   const { push } = useToast();
@@ -24,6 +42,7 @@ export default function CitizenWasteReportPage() {
   const [classificationLabel, setClassificationLabel] = useState("");
   const [classificationConfidence, setClassificationConfidence] = useState<number | "">("");
   const [filePathFromServer, setFilePathFromServer] = useState("");
+  const [guidance, setGuidance] = useState<RecyclingGuidance | null>(null);
 
   const [latitude, setLatitude] = useState<number | "">("");
   const [longitude, setLongitude] = useState<number | "">("");
@@ -118,6 +137,7 @@ export default function CitizenWasteReportPage() {
     setClassificationLabel("");
     setClassificationConfidence("");
     setFilePathFromServer("");
+    setGuidance(null);
   };
 
   const clearSelectedImage = () => {
@@ -242,6 +262,17 @@ export default function CitizenWasteReportPage() {
       setClassificationLabel(out.label ?? "");
       setClassificationConfidence(confidence);
       setFilePathFromServer(out.file_path ?? "");
+      setGuidance({
+        display_name: out.display_name,
+        recyclable: out.recyclable,
+        stream: out.stream,
+        recycle_steps: out.recycle_steps,
+        dispose_steps: out.dispose_steps,
+        do_not: out.do_not,
+        where_to_take: out.where_to_take,
+        guidance_source: out.guidance_source,
+        low_confidence_threshold: out.low_confidence_threshold,
+      });
       push("success", "Image analyzed successfully.");
     } catch (e: any) {
       push("error", e?.response?.data?.detail || "Failed to analyze image.");
@@ -284,6 +315,26 @@ export default function CitizenWasteReportPage() {
       setSubmitting(false);
     }
   };
+
+  const displayName = guidance?.display_name || (classificationLabel ? toReadableLabel(classificationLabel) : "");
+  const lowConfidenceThreshold = Number(guidance?.low_confidence_threshold ?? DEFAULT_LOW_CONFIDENCE_THRESHOLD);
+  const hasLowConfidence = classificationConfidence !== "" && Number(classificationConfidence) < lowConfidenceThreshold;
+  const recyclable = typeof guidance?.recyclable === "boolean" ? guidance.recyclable : false;
+  const primarySteps = recyclable
+    ? (guidance?.recycle_steps && guidance.recycle_steps.length > 0
+      ? guidance.recycle_steps
+      : [
+          "Clean and dry the item before putting it in dry recyclable stream.",
+          "Keep it separate from wet and food-contaminated waste.",
+          "Hand over via dry waste pickup or local recyclable collection channel.",
+        ])
+    : (guidance?.dispose_steps && guidance.dispose_steps.length > 0
+      ? guidance.dispose_steps
+      : [
+          "Keep this item in segregated dry waste.",
+          "Do not mix with wet waste or organic compost stream.",
+          "Follow ward-level municipal guidance for final disposal channel.",
+        ]);
 
   return (
     <div className="space-y-5">
@@ -396,6 +447,74 @@ export default function CitizenWasteReportPage() {
             value={longitude}
             onChange={(e) => setLongitude(e.target.value === "" ? "" : Number(e.target.value))}
           />
+        </div>
+
+        <div className="rounded-2xl border border-white/40 bg-white/55 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Recycling Guidance</p>
+              <p className="mt-1 text-base font-semibold text-slate-900">
+                {displayName || "Analyze image to get recycling guidance"}
+              </p>
+              {guidance?.stream && <p className="mt-1 text-xs text-slate-600">Stream: {guidance.stream}</p>}
+            </div>
+            {classificationLabel && (
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  recyclable ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {recyclable ? "Recyclable" : "Non-recyclable"}
+              </span>
+            )}
+          </div>
+
+          {!classificationLabel ? (
+            <p className="mt-3 text-sm text-slate-600">
+              Run image analysis to see exact handling steps for the detected item.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {hasLowConfidence && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  Low confidence prediction. Retake a clear close-up image and use this guidance with caution.
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+                  {recyclable ? "How to recycle" : "How to dispose safely"}
+                </p>
+                <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
+                  {primarySteps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+
+              {(guidance?.do_not?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">Do not</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                    {(guidance?.do_not || []).map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(guidance?.where_to_take?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">Where to take</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                    {(guidance?.where_to_take || []).map((channel) => (
+                      <li key={channel}>{channel}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <Button type="button" variant="secondary" onClick={useMyLocation}>

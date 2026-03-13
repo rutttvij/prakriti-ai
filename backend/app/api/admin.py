@@ -1,6 +1,6 @@
 # app/api/admin.py
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import List, Optional, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,7 +14,7 @@ from app.models.user import User, UserRole
 from app.models.waste_report import WasteReport, WasteReportStatus
 from app.models.household import SegregationLog
 from app.models.carbon import CarbonActivity, CarbonActivityType
-from app.models.bulk import BulkGenerator, BulkApprovalStatus
+from app.models.bulk import BulkGenerator, OrganizationStatus
 from app.schemas.user import UserRead, UserRole as UserRoleSchema
 from app.core.carbon_engine import record_carbon_activity, PCC_PER_KG_CO2
 from app.services.pcc_award_service import award_reference
@@ -217,14 +217,16 @@ def activate_user(
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user.is_active = True
+
     if user.role in (UserRole.BULK_MANAGER, UserRole.BULK_STAFF, UserRole.BULK_GENERATOR):
         bulk_profile = db.query(BulkGenerator).filter(BulkGenerator.user_id == user.id).first()
-        if bulk_profile:
-            bulk_profile.approval_status = BulkApprovalStatus.APPROVED
-            bulk_profile.approved_by_user_id = current_user.id
-            bulk_profile.approved_at = datetime.now(timezone.utc)
-            db.add(bulk_profile)
+        if bulk_profile and bulk_profile.status != OrganizationStatus.APPROVED.value:
+            raise HTTPException(
+                status_code=409,
+                detail="Approve organization first from Approvals.",
+            )
+
+    user.is_active = True
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -241,11 +243,6 @@ def deactivate_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.is_active = False
-    if user.role in (UserRole.BULK_MANAGER, UserRole.BULK_STAFF, UserRole.BULK_GENERATOR):
-        bulk_profile = db.query(BulkGenerator).filter(BulkGenerator.user_id == user.id).first()
-        if bulk_profile:
-            bulk_profile.approval_status = BulkApprovalStatus.REJECTED
-            db.add(bulk_profile)
     db.add(user)
     db.commit()
     db.refresh(user)

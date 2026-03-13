@@ -845,6 +845,8 @@ def reject_bulk_org(db: Session, *, bulk_org_id: int) -> BulkGenerator:
         raise HTTPException(status_code=404, detail="Bulk organization not found.")
     row.approval_status = BulkApprovalStatus.REJECTED
     row.status = OrganizationStatus.REJECTED.value
+    row.approved_by_user_id = None
+    row.approved_at = None
     db.add(row)
     db.commit()
     db.refresh(row)

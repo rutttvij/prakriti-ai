@@ -1,8 +1,8 @@
 # backend/app/api/waste_reporting.py
 
-import os
 import io
-from typing import List, Optional, Dict
+import os
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
@@ -14,6 +14,11 @@ from app.api import deps
 from app.models.user import User, UserRole
 from app.models.waste_report import WasteReport, WasteReportStatus
 from app.models.household import Household
+from app.schemas.waste_classes import (
+    GUIDANCE_LOW_CONFIDENCE_THRESHOLD,
+    WASTE_CLASS_IDS,
+    get_waste_guidance,
+)
 from app.schemas.waste_report import WasteReportRead
 from app.services.waste_report_service import (
     create_waste_report,
@@ -27,10 +32,16 @@ from app.services.waste_report_service import (
 class WasteClassificationResponse(BaseModel):
     id: str
     type: str
+    display_name: Optional[str] = None
     description: Optional[str] = None
     recyclable: bool
+    stream: Optional[str] = None
     recycle_steps: Optional[List[str]] = None
     dispose_steps: Optional[List[str]] = None
+    do_not: Optional[List[str]] = None
+    where_to_take: Optional[List[str]] = None
+    guidance_source: Optional[str] = None
+    low_confidence_threshold: float = GUIDANCE_LOW_CONFIDENCE_THRESHOLD
     confidence: Optional[float] = None
 
 
@@ -59,57 +70,28 @@ MODEL_PATH = os.path.join(
     "best_effnet_b4.pth",
 )
 
-CLASS_NAMES: List[str] = [
-    "aerosol_cans", "aluminum_food_cans", "aluminum_soda_cans",
-    "cardboard_boxes", "cardboard_packaging", "clothing",
-    "coffee_grounds", "disposable_plastic_cutlery", "eggshells",
-    "food_waste", "glass_beverage_bottles", "glass_cosmetic_containers",
-    "glass_food_jars", "magazines", "newspaper", "office_paper",
-    "paper_cups", "plastic_cup_lids", "plastic_detergent_bottles",
-    "plastic_food_containers", "plastic_shopping_bags", "plastic_soda_bottles",
-    "plastic_straws", "plastic_trash_bags", "plastic_water_bottles",
-    "shoes", "steel_food_cans", "styrofoam_cups",
-    "styrofoam_food_containers", "tea_bags",
-]
-
-# -----------------------------------------------------------------------------
-# Metadata for classification
-# -----------------------------------------------------------------------------
-
-CLASS_METADATA: Dict[str, Dict[str, object]] = {
-    # (Your entire metadata unchanged)
-    # ........
-}
+CLASS_NAMES: List[str] = list(WASTE_CLASS_IDS)
 
 # -----------------------------------------------------------------------------
 # Classification helpers
 # -----------------------------------------------------------------------------
 
 def build_classification_response(label: str, confidence: float) -> WasteClassificationResponse:
-    meta = CLASS_METADATA.get(label)
-    if not meta:
-        readable = label.replace("_", " ").title()
-        return WasteClassificationResponse(
-            id=label,
-            type=readable,
-            description=None,
-            recyclable=False,
-            recycle_steps=None,
-            dispose_steps=[
-                "Keep this item in the dry waste stream.",
-                "Avoid mixing with wet/organic waste.",
-                "Follow local municipal guidance for final disposal.",
-            ],
-            confidence=confidence,
-        )
-
+    meta = get_waste_guidance(label)
+    display_name = str(meta.get("display_name") or label.replace("_", " ").title())
     return WasteClassificationResponse(
         id=label,
-        type=str(meta.get("type")),
+        type=display_name,
+        display_name=display_name,
         description=meta.get("description") or None,
         recyclable=bool(meta.get("recyclable", False)),
+        stream=meta.get("stream") or None,
         recycle_steps=meta.get("recycle_steps") or None,
         dispose_steps=meta.get("dispose_steps") or None,
+        do_not=meta.get("do_not") or None,
+        where_to_take=meta.get("where_to_take") or None,
+        guidance_source=str(meta.get("guidance_source") or "fallback"),
+        low_confidence_threshold=float(meta.get("low_confidence_threshold") or GUIDANCE_LOW_CONFIDENCE_THRESHOLD),
         confidence=confidence,
     )
 

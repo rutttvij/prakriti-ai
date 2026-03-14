@@ -19,6 +19,20 @@ type RecyclingGuidance = {
   low_confidence_threshold?: number;
 };
 
+type ClassificationAlternative = {
+  id: string;
+  confidence: number;
+  display_name?: string;
+  recyclable?: boolean;
+  stream?: string;
+  recycle_steps?: string[];
+  dispose_steps?: string[];
+  do_not?: string[];
+  where_to_take?: string[];
+  guidance_source?: "label_metadata" | "fallback";
+  low_confidence_threshold?: number;
+};
+
 const DEFAULT_LOW_CONFIDENCE_THRESHOLD = 0.6;
 
 function toReadableLabel(label: string): string {
@@ -43,6 +57,7 @@ export default function CitizenWasteReportPage() {
   const [classificationConfidence, setClassificationConfidence] = useState<number | "">("");
   const [filePathFromServer, setFilePathFromServer] = useState("");
   const [guidance, setGuidance] = useState<RecyclingGuidance | null>(null);
+  const [alternatives, setAlternatives] = useState<ClassificationAlternative[]>([]);
 
   const [latitude, setLatitude] = useState<number | "">("");
   const [longitude, setLongitude] = useState<number | "">("");
@@ -138,6 +153,7 @@ export default function CitizenWasteReportPage() {
     setClassificationConfidence("");
     setFilePathFromServer("");
     setGuidance(null);
+    setAlternatives([]);
   };
 
   const clearSelectedImage = () => {
@@ -273,6 +289,7 @@ export default function CitizenWasteReportPage() {
         guidance_source: out.guidance_source,
         low_confidence_threshold: out.low_confidence_threshold,
       });
+      setAlternatives(Array.isArray(out.alternatives) ? out.alternatives : []);
       push("success", "Image analyzed successfully.");
     } catch (e: any) {
       push("error", e?.response?.data?.detail || "Failed to analyze image.");
@@ -336,6 +353,25 @@ export default function CitizenWasteReportPage() {
           "Follow ward-level municipal guidance for final disposal channel.",
         ]);
 
+  const chooseAlternative = (candidate: ClassificationAlternative) => {
+    const confidence = Number(candidate.confidence);
+    if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return;
+    setClassificationLabel(candidate.id);
+    setClassificationConfidence(confidence);
+    setGuidance((prev) => ({
+      display_name: candidate.display_name || toReadableLabel(candidate.id),
+      recyclable: typeof candidate.recyclable === "boolean" ? candidate.recyclable : prev?.recyclable,
+      stream: candidate.stream || prev?.stream,
+      recycle_steps: candidate.recycle_steps || prev?.recycle_steps,
+      dispose_steps: candidate.dispose_steps || prev?.dispose_steps,
+      do_not: candidate.do_not || prev?.do_not,
+      where_to_take: candidate.where_to_take || prev?.where_to_take,
+      guidance_source: candidate.guidance_source || prev?.guidance_source,
+      low_confidence_threshold: candidate.low_confidence_threshold ?? prev?.low_confidence_threshold,
+    }));
+    push("success", `Selected ${candidate.display_name || toReadableLabel(candidate.id)}.`);
+  };
+
   return (
     <div className="space-y-5">
       <CitizenPageHero
@@ -377,6 +413,30 @@ export default function CitizenWasteReportPage() {
             onChange={onFileChange}
           />
         </div>
+
+        {alternatives.length > 1 && (
+          <div className="rounded-xl border border-sky-200/80 bg-sky-50/70 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-700">
+              Top Alternatives
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {alternatives.map((alt) => (
+                <button
+                  key={alt.id}
+                  type="button"
+                  onClick={() => chooseAlternative(alt)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                    classificationLabel === alt.id
+                      ? "border-sky-700 bg-sky-700 text-white"
+                      : "border-sky-300 bg-white text-sky-800"
+                  }`}
+                >
+                  {(alt.display_name || toReadableLabel(alt.id)).slice(0, 42)} · {(alt.confidence * 100).toFixed(1)}%
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {previewUrl && (
           <div className="overflow-hidden rounded-2xl border border-white/40 bg-white/50 p-2">

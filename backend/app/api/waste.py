@@ -20,6 +20,7 @@ class WasteFileClassificationOut(BaseModel):
     label: str
     confidence: float
     file_path: str
+    model_version: str | None = None
     display_name: str | None = None
     recyclable: bool | None = None
     stream: str | None = None
@@ -29,6 +30,7 @@ class WasteFileClassificationOut(BaseModel):
     where_to_take: list[str] | None = None
     guidance_source: str | None = None
     low_confidence_threshold: float | None = None
+    alternatives: list[dict] | None = None
 
 
 @router.post("/classify-file", response_model=WasteFileClassificationOut)
@@ -68,6 +70,7 @@ async def classify_file(
         label=str(ml_result.id),
         confidence=confidence,
         file_path=str(save_path).replace("\\", "/"),
+        model_version=ml_result.model_version,
         display_name=ml_result.display_name,
         recyclable=ml_result.recyclable,
         stream=ml_result.stream,
@@ -77,4 +80,5 @@ async def classify_file(
         where_to_take=ml_result.where_to_take,
         guidance_source=ml_result.guidance_source,
         low_confidence_threshold=ml_result.low_confidence_threshold,
+        alternatives=[item.model_dump() for item in (ml_result.alternatives or [])],
     )

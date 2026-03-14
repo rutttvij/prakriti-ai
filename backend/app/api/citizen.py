@@ -40,6 +40,7 @@ from app.schemas.citizen import (
     WeeklyBreakdownPoint,
     WeeklyScorePoint,
 )
+from app.schemas.waste_classes import WASTE_CLASS_IDS
 from app.services.badge_engine import list_user_badge_items
 from app.services.waste_report_service import create_waste_report
 
@@ -459,6 +460,9 @@ def create_report_endpoint(
 ) -> WasteReportOut:
     if not payload.classification_label or not payload.classification_label.strip():
         raise HTTPException(status_code=400, detail="classification_label is required")
+    normalized_label = payload.classification_label.strip().lower()
+    if normalized_label not in set(WASTE_CLASS_IDS):
+        raise HTTPException(status_code=400, detail="classification_label is not a supported class")
 
     file_path = (payload.file_path or "").strip().replace("\\", "/")
     if not file_path:
@@ -477,7 +481,7 @@ def create_report_endpoint(
         description=payload.description,
         latitude=payload.latitude,
         longitude=payload.longitude,
-        classification_label=payload.classification_label,
+        classification_label=normalized_label,
         classification_confidence=payload.classification_confidence,
         classification_recyclable=None,
         household_id=household_id,

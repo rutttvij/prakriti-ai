@@ -179,6 +179,19 @@ export const classifyWasteFile = async (file: File) => {
     where_to_take?: string[];
     guidance_source?: "label_metadata" | "fallback";
     low_confidence_threshold?: number;
+    alternatives?: Array<{
+      id: string;
+      confidence: number;
+      display_name?: string;
+      recyclable?: boolean;
+      stream?: string;
+      recycle_steps?: string[];
+      dispose_steps?: string[];
+      do_not?: string[];
+      where_to_take?: string[];
+      guidance_source?: "label_metadata" | "fallback";
+      low_confidence_threshold?: number;
+    }>;
   }>(
     "/waste/classify-file",
     form,

@@ -58,6 +58,9 @@ class _DummyProbs:
     def cpu(self):
         return self
 
+    def tolist(self):
+        return list(self.vals)
+
 
 class _DummyNoGrad:
     def __enter__(self):
@@ -77,7 +80,7 @@ class _DummyModel:
 
     def load_state_dict(self, _state_dict, strict=False):
         _ = strict
-        return None
+        return type("_LoadResult", (), {"unexpected_keys": []})()
 
     def __call__(self, _x):
         return "logits"
@@ -184,3 +187,69 @@ def test_valid_model_and_class_map_returns_non_fallback(monkeypatch, tmp_path):
     assert out.id == wr.WASTE_CLASS_IDS[1]
     assert out.model_version == wr.settings.ML_MODEL_VERSION
     assert 0.0 <= float(out.confidence or 0.0) <= 1.0
+
+
+def test_efficientnetv2_arch_uses_timm_builder(monkeypatch, tmp_path):
+    _set_paths(monkeypatch, tmp_path, include_class_map=True)
+    monkeypatch.setattr(wr.settings, "ML_MODEL_ARCH", "efficientnetv2")
+
+    captured = {}
+
+    class _DummyTimm:
+        @staticmethod
+        def create_model(name, pretrained=False, num_classes=0):
+            captured["name"] = name
+            captured["pretrained"] = pretrained
+            captured["num_classes"] = num_classes
+            return _DummyModel()
+
+    monkeypatch.setattr(wr, "timm", _DummyTimm)
+    monkeypatch.setattr(wr, "torch", _DummyTorch)
+    monkeypatch.setattr(wr, "T", _DummyTransformModule)
+    monkeypatch.setattr(wr, "Image", type("_Img", (), {"open": staticmethod(lambda _buf: _DummyImage())}))
+
+    out = wr.classify_image_with_model(b"bytes")
+
+    assert captured["name"] == "tf_efficientnetv2_s"
+    assert captured["pretrained"] is False
+    assert captured["num_classes"] == len(wr.WASTE_CLASS_IDS)
+    assert out.id == wr.WASTE_CLASS_IDS[1]
+
+
+def test_efficientnetv2_arch_alias_uses_timm_builder(monkeypatch, tmp_path):
+    _set_paths(monkeypatch, tmp_path, include_class_map=True)
+    monkeypatch.setattr(wr.settings, "ML_MODEL_ARCH", "tf_efficientnetv2_s")
+
+    captured = {}
+
+    class _DummyTimm:
+        @staticmethod
+        def create_model(name, pretrained=False, num_classes=0):
+            captured["name"] = name
+            captured["pretrained"] = pretrained
+            captured["num_classes"] = num_classes
+            return _DummyModel()
+
+    monkeypatch.setattr(wr, "timm", _DummyTimm)
+    monkeypatch.setattr(wr, "torch", _DummyTorch)
+    monkeypatch.setattr(wr, "T", _DummyTransformModule)
+    monkeypatch.setattr(wr, "Image", type("_Img", (), {"open": staticmethod(lambda _buf: _DummyImage())}))
+
+    out = wr.classify_image_with_model(b"bytes")
+
+    assert captured["name"] == "tf_efficientnetv2_s"
+    assert captured["pretrained"] is False
+    assert captured["num_classes"] == len(wr.WASTE_CLASS_IDS)
+    assert out.id == wr.WASTE_CLASS_IDS[1]
+
+
+def test_invalid_arch_triggers_fallback(monkeypatch, tmp_path):
+    _set_paths(monkeypatch, tmp_path, include_class_map=True)
+    monkeypatch.setattr(wr.settings, "ML_MODEL_ARCH", "invalid_arch")
+
+    monkeypatch.setattr(wr, "torch", _DummyTorch)
+    monkeypatch.setattr(wr, "T", _DummyTransformModule)
+    monkeypatch.setattr(wr, "Image", type("_Img", (), {"open": staticmethod(lambda _buf: _DummyImage())}))
+
+    out = wr.classify_image_with_model(b"bytes")
+    assert out.id == "plastic_water_bottles"

@@ -46,6 +46,7 @@ class Settings(BaseModel):
         "ML_MODEL_PATH",
         os.path.join("backend", "app", "ml_models", "best_convnext.pt"),
     )
+    # Supported values: convnext_tiny (primary default) or efficientnetv2.
     ML_MODEL_ARCH: str = os.getenv("ML_MODEL_ARCH", "convnext_tiny")
     ML_CLASS_MAP_PATH: str = os.getenv(
         "ML_CLASS_MAP_PATH",
@@ -56,6 +57,9 @@ class Settings(BaseModel):
     ML_STD: str = os.getenv("ML_STD", "0.229,0.224,0.225")
     ML_CONF_THRESHOLD: float = float(os.getenv("ML_CONF_THRESHOLD", "0.60"))
     ML_MODEL_VERSION: str = os.getenv("ML_MODEL_VERSION", "convnext_v1")
+    # Env switch examples:
+    # - ConvNeXt default: ML_MODEL_PATH=backend/app/ml_models/best_convnext.pt ML_MODEL_ARCH=convnext_tiny
+    # - EffNetV2 secondary: ML_MODEL_PATH=backend/app/ml_models/best_efficientnetv2.pt ML_MODEL_ARCH=efficientnetv2
 
 
 settings = Settings()

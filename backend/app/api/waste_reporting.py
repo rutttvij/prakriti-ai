@@ -179,14 +179,23 @@ def _build_model(*, arch: str, num_classes: int):
     if timm is None:
         raise RuntimeError("timm missing")
 
-    if arch != "convnext_tiny":
-        raise ValueError(f"Unsupported ML_MODEL_ARCH={arch}")
+    arch_key = str(arch or "").strip().lower()
 
-    return timm.create_model(
-        "convnext_tiny",
-        pretrained=False,
-        num_classes=num_classes,
-    )
+    if arch_key == "convnext_tiny":
+        return timm.create_model(
+            "convnext_tiny",
+            pretrained=False,
+            num_classes=num_classes,
+        )
+
+    if arch_key in {"efficientnetv2", "efficientnetv2_s", "effnetv2", "tf_efficientnetv2_s"}:
+        return timm.create_model(
+            "tf_efficientnetv2_s",
+            pretrained=False,
+            num_classes=num_classes,
+        )
+
+    raise ValueError(f"Unsupported ML_MODEL_ARCH={arch}")
 
 
 def _is_prakriti_wrapper_state(state_dict: dict[str, Any]) -> bool:
